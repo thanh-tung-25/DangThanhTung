@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<link rel="stylesheet" href="../assets/css/main.css">
+
+<body>
+
+<header class="header">
+    <h2>🏠 Phòng trọ</h2>
+    <button onclick="logout()">Logout</button>
+</header>
+
+<div id="toast" class="toast"></div>
+
+<div class="container">
+    <h3>Phòng</h3>
+    <div id="rooms" class="grid"></div>
+
+    <h3>Bài đăng</h3>
+    <div id="posts"></div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+
+<script type="module">
+import { getPhong, thuePhong } from "../js/modules/phong.js";
+import { getBaiDang } from "../js/modules/baidang.js";
+import { renderPhong } from "../js/ui/renderPhong.js";
+import { renderBaiDang } from "../js/ui/renderBaiDang.js";
+import { getUser, logout } from "../js/core/auth.js";
+import { initSocket } from "../js/socket/socket.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user) location.href = "dangnhap.html";
+
+initSocket(user.id);
+
+// load phòng
+const rooms = await getPhong();
+document.getElementById("rooms").innerHTML = renderPhong(rooms);
+
+window.thue = async (id) => {
+    await thuePhong(id);
+    alert("Đã gửi yêu cầu thuê");
+};
+
+// load bài đăng
+const posts = await getBaiDang();
+document.getElementById("posts").innerHTML = renderBaiDang(posts);
+</script>
+
+</body>
+</html>
