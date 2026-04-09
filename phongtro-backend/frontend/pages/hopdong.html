@@ -3,125 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Hợp đồng · Phòng trọ</title>
+    <title>Hợp Đồng - SmartRoom</title>
     <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+    <style>
+        .contract-doc {
+            background: #fff;
+            color: #0f1419;
+            padding: 40px;
+            border-radius: var(--radius-sm);
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+            box-shadow: var(--shadow);
+            font-family: "Times New Roman", serif;
+        }
+        .contract-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+        .contract-party {
+            font-weight: 700;
+            margin-top: 20px;
+            font-size: 1.1rem;
+        }
+        .contract-meta {
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
-<body class="app-body">
+<body>
+    <div id="app-root">
+        <!-- layout -->
+        
+        <div class="panel" style="max-width: 900px; margin: 0 auto;">
+            <div class="panel__head" style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 class="panel__title" style="margin:0;">Chi tiết Hợp đồng</h2>
+                <button class="btn btn--success" id="btnSign" style="display:none;font-weight:bold;">Đồng ý Ký Kết</button>
+            </div>
 
-<header class="topbar">
-    <div class="topbar__brand">
-        <span class="topbar__logo" aria-hidden="true">⌂</span>
-        <div>
-            <div class="topbar__title">Phòng trọ</div>
-            <div class="topbar__tagline">Hợp đồng</div>
+            <div id="contract-view">
+                <div class="empty-hint">Đang tải hợp đồng...</div>
+            </div>
+            
         </div>
     </div>
-    <div class="topbar__actions">
-        <span id="userLabel" class="user-pill"></span>
-        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
-    </div>
-</header>
 
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
+    <script type="module">
+        import { fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
 
-<div class="app-shell">
-    <aside class="sidebar" aria-label="Menu">
-        <nav id="sidebarNav" class="sidebar__nav"></nav>
-    </aside>
+        // param
+        const urlParams = new URLSearchParams(window.location.search);
+        let contractId = urlParams.get("id"); // URL có thể là /hopdong.html?id=123 (nếu xem chi tiết)
+        const role = getRole();
+        
+        async function loadContract() {
+            const view = document.getElementById("contract-view");
+            try {
+                // Demo
+                const hd = {
+                    id: contractId || 1,
+                    trang_thai: role === "NGUOI_THUE" ? "CHO_KY" : "DA_KY",
+                    nguoi_thue: { fullname: "Người Thuê A", id: 2 },
+                    chu_tro: { fullname: "Chủ Trọ B" },
+                    phong: { ten_phong: "P.101", gia_thue: 3500000 },
+                    ngay_bat_dau: "2026-04-10"
+                };
 
-    <main class="layout layout--with-sidebar">
-        <section class="panel">
-            <div class="panel__head">
-                <h2 class="panel__title">Danh sách hợp đồng</h2>
-                <p class="panel__desc">Từ <code class="inline-code">GET /api/hopdong</code>. Có nút xác nhận (nếu backend cho phép) gọi <code class="inline-code">PATCH /api/hopdong/:id/xac-nhan</code>.</p>
-            </div>
-            <div id="contracts" class="list"></div>
-        </section>
-    </main>
-</div>
+                view.innerHTML = `
+                    <div class="contract-doc">
+                        <div class="contract-title">
+                            CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>
+                            Độc lập - Tự do - Hạnh phúc<br>
+                            -------------<br>
+                            HỢP ĐỒNG THUÊ PHÒNG TRỌ
+                        </div>
+                        <div class="contract-meta">Mã Hợp Đồng: #HD${hd.id} | Ngày bắt đầu: ${new Date(hd.ngay_bat_dau).toLocaleDateString("vi-VN")}</div>
 
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script type="module">
-import { getHopDong, xacNhanHopDong } from "../js/modules/hopdong.js";
-import { getUser, logout } from "../js/core/auth.js";
-import { initSocket } from "../js/socket/socket.js";
-import { renderSidebar } from "../js/ui/sidebar.js";
+                        <div class="contract-party">BÊN CHO THUÊ (BÊN A):</div>
+                        <p>Họ và tên: <b>${hd.chu_tro.fullname}</b></p>
 
-window.logout = logout;
+                        <div class="contract-party">BÊN THUÊ (BÊN B):</div>
+                        <p>Họ và tên: <b>${hd.nguoi_thue.fullname}</b></p>
+                        
+                        <div class="contract-party">NỘI DUNG HỢP ĐỒNG:</div>
+                        <p>Bên A đồng ý cho Bên B thuê phòng <b>${hd.phong.ten_phong}</b>. Giá thuê thoả thuận là <b>${parseInt(hd.phong.gia_thue).toLocaleString()} VNĐ/Tháng</b>.</p>
+                        <p>Tiền phòng phải nộp trước ngày 05 hằng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
+                        
+                        <div style="margin-top: 40px; display:flex; justify-content:space-around; text-align:center;">
+                            <div>
+                                <b>BÊN A (Chủ trọ)</b><br>
+                                <i>(Đã tạo trên hệ thống)</i>
+                            </div>
+                            <div>
+                                <b>BÊN B (Người thuê)</b><br>
+                                <i style="color:${hd.trang_thai === 'DA_KY' ? 'green' : 'red'}">
+                                    ${hd.trang_thai === 'DA_KY' ? '(Đã ký xác nhận)' : '(Chờ ký xác nhận)'}
+                                </i>
+                            </div>
+                        </div>
+                    </div>
+                `;
 
-const user = getUser();
-if (!user || user.id == null) {
-    window.location.href = "dangnhap.html";
-} else {
-    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
-    initSocket(user.id);
-    renderSidebar(document.getElementById("sidebarNav"), user, "hopdong.html");
-}
+                if(role === "NGUOI_THUE" && hd.trang_thai !== "DA_KY") {
+                    const btnSign = document.getElementById("btnSign");
+                    btnSign.style.display = "block";
+                    btnSign.onclick = async () => {
+                        if(confirm("Bạn có chắc chắn chấp nhận thuê và ký bản hợp đồng này?")) {
+                            // await fetchAPI(`/hopdong/${hd.id}/xac-nhan`, "POST");
+                            showToast("Bạn đã ký hợp đồng thành công!", "success");
+                            btnSign.style.display = "none";
+                            setTimeout(() => loadContract(), 1000);
+                        }
+                    };
+                }
 
-const escapeHtml = (s) =>
-    String(s ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;");
+            } catch(e) {
+                view.innerHTML = `<div class="empty-hint error">Lỗi tải dữ liệu.</div>`;
+            }
+        }
 
-const renderContracts = (data) => {
-    if (!Array.isArray(data) || data.length === 0) {
-        return `<p class="empty-hint">Chưa có hợp đồng.</p>`;
-    }
-
-    return data.map((c) => {
-        const id = c.id ?? c.hopdong_id ?? "";
-        const status = c.status ?? c.trang_thai ?? "—";
-        const roomId = c.room_id ?? c.phong_id ?? "—";
-        const start = c.start_date ?? c.ngay_bat_dau ?? "—";
-        const end = c.end_date ?? c.ngay_ket_thuc ?? "—";
-        const canConfirm = String(status).toUpperCase().includes("PENDING") || String(status).toUpperCase().includes("CHO_XAC_NHAN");
-
-        return `
-            <div class="list-item">
-                <div class="list-item__main">
-                    <div class="list-item__title">Hợp đồng #${escapeHtml(id)} <span class="badge">${escapeHtml(status)}</span></div>
-                    <div class="list-item__meta">Phòng #${escapeHtml(roomId)} · ${escapeHtml(start)} → ${escapeHtml(end)}</div>
-                </div>
-                <div class="list-item__actions">
-                    <button type="button" class="btn btn--ghost btn--sm js-confirm" data-id="${escapeHtml(id)}" ${canConfirm ? "" : "disabled"}>
-                        Xác nhận
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join("");
-};
-
-const load = async () => {
-    const el = document.getElementById("contracts");
-    try {
-        const data = await getHopDong();
-        el.innerHTML = renderContracts(data);
-    } catch {
-        el.innerHTML = `<p class="empty-hint error">Không tải được hợp đồng.</p>`;
-    }
-};
-
-document.getElementById("contracts").addEventListener("click", async (e) => {
-    const btn = e.target.closest?.(".js-confirm");
-    if (!btn || btn.disabled) return;
-
-    const id = btn.dataset.id;
-    btn.disabled = true;
-    try {
-        await xacNhanHopDong(id);
-        await load();
-    } catch {
-        btn.disabled = false;
-        alert("Không xác nhận được hợp đồng.");
-    }
-});
-
-await load();
-</script>
-
+        window.addEventListener("load", loadContract);
+    </script>
 </body>
 </html>
-

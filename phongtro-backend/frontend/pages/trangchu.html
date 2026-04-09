@@ -3,182 +3,163 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Trang chủ · Phòng trọ</title>
+    <title>Trang chủ - Bảng tin</title>
     <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
 </head>
-<body class="app-body">
+<body>
+    <div id="app-root">
+        <!-- Layout.js sẽ chèn Topbar và Sidebar vào đây -->
+        <!-- Nội dung dưới đây là Main Content -->
+        
+        <div class="panel" style="max-width: 800px; margin: 0 auto;">
+            
+            <!-- Vùng đăng bài dành cho Chủ Trọ -->
+            <div id="composer-area" style="display: none;">
+                <div class="composer">
+                    <div class="composer__head">
+                        <span class="composer__title">Đăng tin phòng trọ</span>
+                    </div>
+                    <form id="postForm" class="composer__body">
+                        <textarea id="postContent" class="composer__input" rows="3" placeholder="Bạn có phòng nào đang trống muốn cho thuê?..." required></textarea>
+                        <div class="field" style="margin-top: 5px;">
+                            <select id="postRoom" required>
+                                <option value="">-- Chọn phòng trống để quảng cáo --</option>
+                            </select>
+                        </div>
+                        <div class="composer__actions">
+                            <button type="submit" class="btn btn--primary" id="btnPost">Đăng bài</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
-<header class="topbar">
-    <div class="topbar__brand">
-        <span class="topbar__logo" aria-hidden="true">⌂</span>
-        <div>
-            <div class="topbar__title">Phòng trọ</div>
-            <div class="topbar__tagline">Danh sách phòng & bài đăng</div>
-        </div>
-    </div>
-    <div class="topbar__actions">
-        <span id="userLabel" class="user-pill"></span>
-        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
-    </div>
-</header>
-
-<div id="toast" class="toast" role="status" aria-live="polite"></div>
-
-<div class="app-shell">
-    <aside class="sidebar" aria-label="Menu">
-        <nav id="sidebarNav" class="sidebar__nav"></nav>
-    </aside>
-
-    <main class="layout layout--with-sidebar">
-        <section class="panel">
             <div class="panel__head">
-                <h2 class="panel__title">Phòng cho thuê</h2>
-                <p class="panel__desc">Dữ liệu từ <code class="inline-code">GET /api/phong</code>. Nút thuê gọi <code class="inline-code">POST /api/hopdong</code> (yêu cầu vai trò <code class="inline-code">NGUOI_THUE</code>).</p>
+                <h2 class="panel__title">Phòng Trọ Mới Nhất</h2>
+                <p class="panel__desc">Khám phá các phòng trọ đang được cho thuê</p>
             </div>
-            <div id="rooms" class="grid grid--rooms"></div>
-        </section>
 
-        <section class="panel">
-            <div class="panel__head">
-                <h2 class="panel__title">Bài đăng</h2>
-                <p class="panel__desc">Từ <code class="inline-code">GET /api/baidang</code> (kèm <code class="inline-code">username</code> từ server).</p>
+            <!-- Feed Bài Đăng -->
+            <div id="feed-container" class="stack--posts">
+                <div class="empty-hint">Đang tải bảng tin...</div>
             </div>
-            <div id="posts" class="stack stack--posts"></div>
-        </section>
-    </main>
-</div>
-
-<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-
-<script type="module">
-import { getPhong, thuePhong } from "../js/modules/phong.js";
-import { getBaiDang, taoBaiDang, xoaBaiDang } from "../js/modules/baidang.js";
-import { renderPhong } from "../js/ui/renderPhong.js";
-import { renderBaiDang } from "../js/ui/renderBaiDang.js";
-import { getUser, logout } from "../js/core/auth.js";
-import { initSocket } from "../js/socket/socket.js";
-import { renderSidebar } from "../js/ui/sidebar.js";
-
-window.logout = logout;
-
-const user = getUser();
-if (!user || user.id == null) {
-    window.location.href = "dangnhap.html";
-} else {
-    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
-    initSocket(user.id);
-    renderSidebar(document.getElementById("sidebarNav"), user, "trangchu.html");
-}
-
-const normalizeRole = (u) => {
-    const r = u?.role ?? u?.vaiTro ?? u?.authority ?? u?.authorities;
-    if (!r) return null;
-    if (Array.isArray(r)) return String(r[0] ?? "").toUpperCase();
-    return String(r).toUpperCase();
-};
-
-window.thue = async (id) => {
-    const r = await thuePhong(id);
-    alert(r.message || "Đã xử lý yêu cầu.");
-};
-
-try {
-    const rooms = await getPhong();
-    document.getElementById("rooms").innerHTML = renderPhong(Array.isArray(rooms) ? rooms : []);
-} catch (e) {
-    document.getElementById("rooms").innerHTML = `<p class="empty-hint error">Không tải được danh sách phòng.</p>`;
-}
-
-try {
-    const posts = await getBaiDang();
-    document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
-} catch (e) {
-    document.getElementById("posts").innerHTML = `<p class="empty-hint error">Không tải được bài đăng.</p>`;
-}
-
-const postsPanel = document.getElementById("posts").closest(".panel");
-const role = normalizeRole(user);
-if (role === "CHU_TRO" || role === "CHỦ TRỌ" || role === "CHUTRO") {
-    const composer = document.createElement("div");
-    composer.className = "composer";
-    composer.innerHTML = `
-        <div class="composer__head">
-            <div class="composer__title">Đăng bài</div>
-            <div id="postHint" class="muted"></div>
+            
         </div>
-        <div class="composer__body">
-            <textarea id="postContent" class="composer__input" rows="3" placeholder="Bạn muốn đăng gì hôm nay?"></textarea>
-            <div class="composer__actions">
-                <button id="postBtn" type="button" class="btn btn--primary">Đăng</button>
+
+        <!-- Template Bài viết -->
+        <template id="post-tmpl">
+            <div class="post-card post">
+                <div class="post__head">
+                    <div class="post__avatar" data-field="avatarInitial">A</div>
+                    <div class="post__who">
+                        <div class="post__author" data-field="authorName">Tên chủ trọ</div>
+                        <div class="post__meta">
+                            <span class="post__room" data-field="roomName">Phòng 102</span>
+                            <span class="post__sep">•</span>
+                            <span data-field="createdAt">Vừa xong</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="post__body" data-field="content">Nội dung bài viết...</div>
+                <div class="post__actions">
+                    <button class="btn btn--primary btn--sm btn-contact" data-action="contact">
+                        Liên hệ chủ trọ
+                    </button>
+                </div>
             </div>
-        </div>
-    `;
-    postsPanel.insertBefore(composer, postsPanel.querySelector("#posts"));
+        </template>
+        
+    </div>
 
-    const hintEl = composer.querySelector("#postHint");
-    const contentEl = composer.querySelector("#postContent");
-    const btnEl = composer.querySelector("#postBtn");
+    <script type="module">
+        import { CONFIG, fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
 
-    btnEl.addEventListener("click", async () => {
-        const content = contentEl.value.trim();
-        if (!content) return;
-        btnEl.disabled = true;
-        hintEl.textContent = "Đang đăng…";
-        try {
-            await taoBaiDang({ content });
-            contentEl.value = "";
-            hintEl.textContent = "Đã đăng.";
-            const posts = await getBaiDang();
-            document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
-        } catch {
-            hintEl.textContent = "Đăng thất bại.";
-        } finally {
-            btnEl.disabled = false;
+        const role = getRole();
+        const user = getUser();
+        const composerArea = document.getElementById("composer-area");
+        const roomSelect = document.getElementById("postRoom");
+        
+        // Hiện khung Đăng Bài nếu là Chủ Trọ
+        if (role === "CHU_TRO") {
+            composerArea.style.display = "block";
+            loadMyRooms();
         }
-    });
-}
 
-document.getElementById("posts").addEventListener("click", (e) => {
-    const delBtn = e.target.closest?.(".js-delete-post");
-    if (delBtn) {
-        const postId = delBtn.dataset.postId;
-        if (!postId) return;
-        if (!confirm("Xóa bài đăng này?")) return;
-        delBtn.disabled = true;
-        (async () => {
+        async function loadMyRooms() {
             try {
-                await xoaBaiDang(postId);
-                const posts = await getBaiDang();
-                document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
-            } catch {
-                delBtn.disabled = false;
-                alert("Xóa thất bại.");
+                // Fetch danh sách phòng của chủ trọ để họ chọn khi đăng bài
+                const rooms = await fetchAPI("/phong");
+                rooms.forEach(r => {
+                    if(r.trang_thai === "TRONG") { // chỉ đăng phòng trống
+                        const opt = document.createElement("option");
+                        opt.value = r.id;
+                        opt.textContent = r.ten_phong + ` (Giá: ${r.gia_thue} đ)`;
+                        roomSelect.appendChild(opt);
+                    }
+                });
+            } catch(e) {
+                console.log(e);
             }
-        })();
-        return;
-    }
+        }
 
-    const btn = e.target.closest?.(".js-contact");
-    if (!btn) return;
+        // Handle Form Đăng Bài
+        document.getElementById("postForm")?.addEventListener("submit", async(e) => {
+            e.preventDefault();
+            const noi_dung = document.getElementById("postContent").value;
+            const phong_id = roomSelect.value;
+            
+            try {
+                await fetchAPI("/baidang", "POST", { noi_dung, phong_id });
+                showToast("Đăng bài thành công!");
+                document.getElementById("postContent").value = "";
+                loadFeed();
+            } catch(err) {
+                showToast(err.message, "error");
+            }
+        });
 
-    const toUserId = btn.dataset.toUserId || "";
-    const postId = btn.dataset.postId || "";
-    const username = btn.dataset.username || "";
+        // Load Feed Board
+        async function loadFeed() {
+            const container = document.getElementById("feed-container");
+            try {
+                const posts = await fetchAPI("/baidang"); // Backend cần có GET /baidang
+                if (!posts || posts.length === 0) {
+                    container.innerHTML = '<div class="empty-hint">Chưa có bài đăng nào.</div>';
+                    return;
+                }
 
-    const qp = new URLSearchParams();
-    if (toUserId) qp.set("toUserId", toUserId);
-    if (postId) qp.set("postId", postId);
-    if (username) qp.set("username", username);
+                container.innerHTML = "";
+                const tmpl = document.getElementById("post-tmpl");
 
-    sessionStorage.setItem(
-        "chat_context",
-        JSON.stringify({ toUserId: toUserId || null, postId: postId || null, username: username || null })
-    );
+                posts.forEach(p => {
+                    const node = tmpl.content.cloneNode(true);
+                    
+                    const authorName = p.nguoi_dang?.fullname || "Chủ Trọ";
+                    node.querySelector('[data-field="avatarInitial"]').textContent = authorName.charAt(0).toUpperCase();
+                    node.querySelector('[data-field="authorName"]').textContent = authorName;
+                    node.querySelector('[data-field="roomName"]').textContent = p.phong?.ten_phong || "Phòng Trọ";
+                    node.querySelector('[data-field="createdAt"]').textContent = new Date(p.createdAt).toLocaleString("vi-VN");
+                    node.querySelector('[data-field="content"]').textContent = p.noi_dung;
 
-    window.location.href = `tinnhan.html${qp.toString() ? `?${qp.toString()}` : ""}`;
-});
+                    // Nếu user là chủ bài viết, ẩn nút Liên Hệ
+                    const btnContact = node.querySelector('.btn-contact');
+                    if (p.nguoi_dang?.id === user.id) {
+                        btnContact.style.display = "none";
+                    } else {
+                        btnContact.onclick = () => {
+                            // Chuyển tới trang tin nhắn, query param là id của chủ bài để tự động mở chat
+                            window.location.href = `tinnhan.html?userId=${p.nguoi_dang.id}`;
+                        };
+                    }
 
-</script>
+                    container.appendChild(node);
+                });
+            } catch (err) {
+                container.innerHTML = '<div class="empty-hint error">Lỗi tải dữ liệu.</div>';
+            }
+        }
 
+        window.addEventListener("load", loadFeed);
+    </script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-﻿
+
 
 
 const db = require("../config/db");
@@ -12,7 +12,8 @@ const taoNhom = async (name, user) => {
         }
     );
 
-    const groupId = res.insertId;
+    // res trong Sequelize với MySQL insert đã là number (insertId)
+    const groupId = res;
 
     // thêm owner vào nhóm
     await db.query(

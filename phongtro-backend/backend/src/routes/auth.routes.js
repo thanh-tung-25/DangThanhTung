@@ -1,4 +1,4 @@
-﻿const router = require("express").Router();
+const router = require("express").Router();
 
 const { register, login } = require("../controllers/auth.controller");
 
@@ -17,7 +17,7 @@ router.get("/me", authenticate, (req, res) => {
 router.get(
     "/admin",
     authenticate,
-    authorize("admin"),
+    authorize("ADMIN"),
     (req, res) => {
         res.json({ message: "Admin access" });
     }

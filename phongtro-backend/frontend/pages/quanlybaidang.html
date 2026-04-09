@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý Bài Đăng - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+</head>
+<body>
+    <div id="app-root">
+        <div class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Bài đăng của tôi</h2>
+                <p class="panel__desc">Quản lý và xoá các tin đăng tìm khách thuê</p>
+                <div style="margin-top: 10px;">
+                    <a href="trangchu.html" class="btn btn--primary btn--sm">&larr; Về trang chủ để Đăng bài mới</a>
+                </div>
+            </div>
+
+            <div class="list" id="posts-container">
+                <div class="empty-hint">Đang tải...</div>
+            </div>
+        </div>
+
+        <template id="my-post-tmpl">
+            <div class="list-item">
+                <div class="list-item__main">
+                    <div class="list-item__title">
+                        <span data-field="roomName">Phòng 102</span>
+                        <span class="badge badge--muted" data-field="date">01/01</span>
+                    </div>
+                    <div class="list-item__meta" data-field="content" style="white-space:pre-wrap;">
+                        Nội dung bài viết...
+                    </div>
+                </div>
+                <div class="list-item__actions">
+                    <button class="btn btn--danger btn--sm btn-del" style="background:var(--danger); color:white;">Xoá bài</button>
+                </div>
+            </div>
+        </template>
+        
+    </div>
+
+    <script type="module">
+        import { fetchAPI, getUser, showToast } from "../js/utils/config.js";
+        
+        const user = getUser();
+
+        async function loadMyPosts() {
+            const container = document.getElementById("posts-container");
+            try {
+                // Giả lập API fetch các bài của chính mình hoặc filter frontend
+                const posts = await fetchAPI("/baidang").catch(e => []); 
+                const myPosts = posts.filter(p => p.nguoi_dang?.id === user.id);
+
+                if(!myPosts || myPosts.length === 0) {
+                    container.innerHTML = '<div class="empty-hint">Bạn chưa có bài đăng nào.</div>';
+                    return;
+                }
+
+                container.innerHTML = "";
+                const tmpl = document.getElementById("my-post-tmpl");
+
+                myPosts.forEach(p => {
+                    const node = tmpl.content.cloneNode(true);
+                    node.querySelector('[data-field="roomName"]').textContent = p.phong?.ten_phong || "Tin tổng hợp";
+                    node.querySelector('[data-field="date"]').textContent = new Date(p.createdAt).toLocaleDateString("vi-VN");
+                    node.querySelector('[data-field="content"]').textContent = p.noi_dung;
+                    
+                    node.querySelector('.btn-del').onclick = async () => {
+                        if(!confirm("Bạn chắc chắn muốn xoá bài viết này?")) return;
+                        try {
+                            // await fetchAPI(`/baidang/${p.id}`, "DELETE");
+                            showToast("Đã xoá thành công!");
+                            loadMyPosts(); // reload
+                        } catch(e) {
+                            showToast("Lỗi: " + e.message, "error");
+                        }
+                    };
+
+                    container.appendChild(node);
+                });
+            } catch (err) {
+                container.innerHTML = `<div class="empty-hint error">Lỗi tải bài đăng.</div>`;
+            }
+        }
+
+        window.addEventListener("load", loadMyPosts);
+    </script>
+</body>
+</html>
