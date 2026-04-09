@@ -1,4 +1,8 @@
-/* Phòng trọ — giao diện căn theo API backend */
+/* =========================================================
+   Phòng trọ — styles cho các trang frontend
+   ========================================================= */
+
+@import url("./components.css");
 
 :root {
     --bg: #0f1419;
@@ -40,7 +44,7 @@ body {
     background: linear-gradient(165deg, #0f1419 0%, #152238 45%, #0f1419 100%);
 }
 
-/* ——— Auth ——— */
+/* ===================== AUTH ===================== */
 
 .auth-page {
     display: flex;
@@ -145,7 +149,7 @@ body {
     line-height: 1.45;
 }
 
-/* ——— App shell ——— */
+/* =================== APP SHELL =================== */
 
 .topbar {
     display: flex;
@@ -252,7 +256,7 @@ body {
     color: var(--accent-hover);
 }
 
-/* ——— Grids ——— */
+/* ===================== LAYOUT ==================== */
 
 .grid {
     display: grid;
@@ -331,29 +335,6 @@ body {
     padding: 16px 18px;
 }
 
-.post-card__head {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-bottom: 10px;
-}
-
-.post-card__author {
-    font-weight: 600;
-    color: var(--text);
-}
-
-.post-card__meta {
-    font-size: 0.8rem;
-    color: var(--muted);
-}
-
-.post-card__body {
-    margin: 0;
-    font-size: 0.95rem;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
 
 .empty-hint {
     margin: 0;
@@ -370,7 +351,7 @@ body {
     border-color: rgba(231, 76, 60, 0.35);
 }
 
-/* ——— Buttons ——— */
+/* ==================== BUTTONS ==================== */
 
 .btn {
     display: inline-flex;
@@ -410,7 +391,7 @@ body {
     width: 100%;
 }
 
-/* ——— Toast ——— */
+/* ===================== TOAST ===================== */
 
 .toast {
     position: fixed;
@@ -439,5 +420,40 @@ body {
 
     .layout {
         padding: 16px;
+    }
+
+    .app-shell {
+        grid-template-columns: 1fr;
+        padding: 0 16px 16px;
+    }
+
+    .sidebar {
+        position: static;
+        top: auto;
+    }
+
+    .layout--with-sidebar {
+        padding-top: 16px;
+    }
+
+    .stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .list-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .list-item__actions {
+        justify-content: flex-start;
+    }
+
+    .grid-two {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-shell__composer {
+        grid-template-columns: 1fr;
     }
 }

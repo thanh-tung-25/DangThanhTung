@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Nhóm · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
+
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Nhóm</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
+
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Nhóm</h2>
+                <p class="panel__desc">Sau khi ký hợp đồng, chủ trọ thêm người thuê vào nhóm để trao đổi thông tin chung (chat nhóm realtime).</p>
+            </div>
+            <p class="empty-hint">Trang nhóm sẽ được nối API + realtime sau (danh sách nhóm, thành viên, khung chat nhóm).</p>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script type="module">
+import { getUser, logout } from "../js/core/auth.js";
+import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "nhom.html");
+}
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Thông báo · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
+
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Thông báo</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
+
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Thông báo</h2>
+                <p class="panel__desc">Từ <code class="inline-code">GET /api/thongbao</code>. Đánh dấu đã đọc gọi <code class="inline-code">PATCH /api/thongbao/:id</code>.</p>
+            </div>
+            <div id="notifs" class="list"></div>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script type="module">
+import { getThongBao, markAsRead } from "../js/modules/thongbao.js";
+import { getUser, logout } from "../js/core/auth.js";
+import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "thongbao.html");
+}
+
+const escapeHtml = (s) =>
+    String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+const renderNotifs = (data) => {
+    if (!Array.isArray(data) || data.length === 0) {
+        return `<p class="empty-hint">Chưa có thông báo.</p>`;
+    }
+
+    return data.map((n) => {
+        const id = n.id ?? "";
+        const content = n.content ?? n.noi_dung ?? "";
+        const isRead = Boolean(n.read ?? n.da_doc ?? n.isRead);
+        const title = isRead ? "Đã đọc" : "Chưa đọc";
+
+        return `
+            <div class="list-item ${isRead ? "is-read" : ""}">
+                <div class="list-item__main">
+                    <div class="list-item__title">
+                        ${escapeHtml(title)}
+                        <span class="badge ${isRead ? "badge--muted" : "badge--accent"}">${escapeHtml(isRead ? "READ" : "NEW")}</span>
+                    </div>
+                    <div class="list-item__meta">${escapeHtml(content)}</div>
+                </div>
+                <div class="list-item__actions">
+                    <button type="button" class="btn btn--ghost btn--sm js-read" data-id="${escapeHtml(id)}" ${isRead ? "disabled" : ""}>
+                        Đánh dấu đã đọc
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join("");
+};
+
+const load = async () => {
+    const el = document.getElementById("notifs");
+    try {
+        const data = await getThongBao();
+        el.innerHTML = renderNotifs(data);
+    } catch {
+        el.innerHTML = `<p class="empty-hint error">Không tải được thông báo.</p>`;
+    }
+};
+
+document.getElementById("notifs").addEventListener("click", async (e) => {
+    const btn = e.target.closest?.(".js-read");
+    if (!btn || btn.disabled) return;
+
+    const id = btn.dataset.id;
+    btn.disabled = true;
+    try {
+        await markAsRead(id);
+        await load();
+    } catch {
+        btn.disabled = false;
+        alert("Không cập nhật được trạng thái thông báo.");
+    }
+});
+
+await load();
+</script>
+
+</body>
+</html>
+

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Người dùng · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
+
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Quản lý người dùng</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
+
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Người dùng</h2>
+                <p class="panel__desc">Trang dành cho <code class="inline-code">ADMIN</code>: thêm/sửa/xóa người dùng.</p>
+            </div>
+
+            <div class="grid-two">
+                <div class="card">
+                    <div class="card__title">Tạo người dùng</div>
+                    <form id="createForm" class="form">
+                        <label class="field">
+                            <span class="field__label">Username</span>
+                            <input type="text" name="username" required placeholder="vd: tungdang" />
+                        </label>
+                        <label class="field">
+                            <span class="field__label">Password</span>
+                            <input type="password" name="password" required placeholder="••••••••" />
+                        </label>
+                        <label class="field">
+                            <span class="field__label">Role</span>
+                            <select name="role">
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="CHU_TRO">CHỦ TRỌ</option>
+                                <option value="NGUOI_THUE" selected>NGƯỜI THUÊ</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn--primary">Tạo</button>
+                        <div id="createHint" class="muted"></div>
+                    </form>
+                </div>
+
+                <div class="card">
+                    <div class="card__title">Danh sách người dùng</div>
+                    <div id="users" class="list"></div>
+                    <div id="endpointHint" class="muted" style="margin-top:10px;"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script type="module">
+import { getUser, logout } from "../js/core/auth.js";
+import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
+import { listUsers, createUser, updateUser, deleteUser } from "../js/modules/user.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "quanlynguoidung.html");
+}
+
+const escapeHtml = (s) =>
+    String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+const normalizeUsers = (data) => {
+    if (Array.isArray(data)) return data;
+    if (Array.isArray(data?.data)) return data.data;
+    if (Array.isArray(data?.items)) return data.items;
+    if (Array.isArray(data?.users)) return data.users;
+    return [];
+};
+
+const renderUsers = (users) => {
+    if (!users || users.length === 0) return `<p class="empty-hint">Chưa có người dùng.</p>`;
+
+    return users
+        .map((u) => {
+            const id = u.id ?? u.user_id ?? u.userId ?? "";
+            const username = u.username ?? u.ten_dang_nhap ?? u.name ?? "—";
+            const role = u.role ?? u.vaiTro ?? u.authority ?? "—";
+            return `
+                <div class="list-item">
+                    <div class="list-item__main">
+                        <div class="list-item__title">
+                            ${escapeHtml(username)}
+                            <span class="badge badge--accent">${escapeHtml(role)}</span>
+                        </div>
+                        <div class="list-item__meta">id: <span class="inline-code">${escapeHtml(id)}</span></div>
+                    </div>
+                    <div class="list-item__actions">
+                        <button type="button" class="btn btn--ghost btn--sm js-edit" data-id="${escapeHtml(id)}" data-username="${escapeHtml(username)}" data-role="${escapeHtml(role)}">Sửa</button>
+                        <button type="button" class="btn btn--ghost btn--sm js-del" data-id="${escapeHtml(id)}">Xóa</button>
+                    </div>
+                </div>
+            `;
+        })
+        .join("");
+};
+
+const usersEl = document.getElementById("users");
+const endpointHintEl = document.getElementById("endpointHint");
+
+const load = async () => {
+    usersEl.innerHTML = `<p class="empty-hint">Đang tải…</p>`;
+    const r = await listUsers();
+    endpointHintEl.textContent = r?.path ? `Đang dùng endpoint: ${r.path}` : "";
+    if (!r?.ok) {
+        usersEl.innerHTML = `<p class="empty-hint error">Không tải được user (status ${escapeHtml(r?.status)}). Hãy kiểm tra endpoint backend.</p>`;
+        return;
+    }
+    const users = normalizeUsers(r.data);
+    usersEl.innerHTML = renderUsers(users);
+};
+
+document.getElementById("createForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const form = e.currentTarget;
+    const hint = document.getElementById("createHint");
+    hint.textContent = "Đang tạo…";
+
+    const payload = {
+        username: form.username.value.trim(),
+        password: form.password.value,
+        role: form.role.value
+    };
+
+    const r = await createUser(payload);
+    if (!r?.ok) {
+        hint.textContent = `Tạo thất bại (status ${r?.status}).`;
+        return;
+    }
+    hint.textContent = "Đã tạo.";
+    form.reset();
+    await load();
+});
+
+usersEl.addEventListener("click", async (e) => {
+    const del = e.target.closest?.(".js-del");
+    const edit = e.target.closest?.(".js-edit");
+
+    if (del) {
+        const id = del.dataset.id;
+        if (!id) return;
+        if (!confirm("Xóa người dùng này?")) return;
+        del.disabled = true;
+        const r = await deleteUser(id);
+        if (!r?.ok) alert(`Xóa thất bại (status ${r?.status}).`);
+        await load();
+        return;
+    }
+
+    if (edit) {
+        const id = edit.dataset.id;
+        const currentUsername = edit.dataset.username || "";
+        const currentRole = edit.dataset.role || "";
+        const newUsername = prompt("Username mới (để trống nếu giữ nguyên):", currentUsername) ?? "";
+        const newRole = prompt("Role mới (ADMIN / CHU_TRO / NGUOI_THUE):", currentRole) ?? "";
+        const payload = {};
+        if (newUsername.trim() && newUsername.trim() !== currentUsername) payload.username = newUsername.trim();
+        if (newRole.trim() && newRole.trim() !== currentRole) payload.role = newRole.trim();
+        if (Object.keys(payload).length === 0) return;
+        edit.disabled = true;
+        const r = await updateUser(id, payload);
+        if (!r?.ok) alert(`Cập nhật thất bại (status ${r?.status}).`);
+        await load();
+    }
+});
+
+await load();
+</script>
+
+</body>
+</html>
+

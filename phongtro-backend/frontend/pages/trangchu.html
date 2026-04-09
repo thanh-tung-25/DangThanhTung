@@ -24,33 +24,40 @@
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<main class="layout">
-    <section class="panel">
-        <div class="panel__head">
-            <h2 class="panel__title">Phòng cho thuê</h2>
-            <p class="panel__desc">Dữ liệu từ <code class="inline-code">GET /api/phong</code>. Nút thuê gọi <code class="inline-code">POST /api/hopdong</code> (yêu cầu vai trò <code class="inline-code">NGUOI_THUE</code>).</p>
-        </div>
-        <div id="rooms" class="grid grid--rooms"></div>
-    </section>
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
 
-    <section class="panel">
-        <div class="panel__head">
-            <h2 class="panel__title">Bài đăng</h2>
-            <p class="panel__desc">Từ <code class="inline-code">GET /api/baidang</code> (kèm <code class="inline-code">username</code> từ server).</p>
-        </div>
-        <div id="posts" class="stack stack--posts"></div>
-    </section>
-</main>
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Phòng cho thuê</h2>
+                <p class="panel__desc">Dữ liệu từ <code class="inline-code">GET /api/phong</code>. Nút thuê gọi <code class="inline-code">POST /api/hopdong</code> (yêu cầu vai trò <code class="inline-code">NGUOI_THUE</code>).</p>
+            </div>
+            <div id="rooms" class="grid grid--rooms"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Bài đăng</h2>
+                <p class="panel__desc">Từ <code class="inline-code">GET /api/baidang</code> (kèm <code class="inline-code">username</code> từ server).</p>
+            </div>
+            <div id="posts" class="stack stack--posts"></div>
+        </section>
+    </main>
+</div>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
 <script type="module">
 import { getPhong, thuePhong } from "../js/modules/phong.js";
-import { getBaiDang } from "../js/modules/baidang.js";
+import { getBaiDang, taoBaiDang, xoaBaiDang } from "../js/modules/baidang.js";
 import { renderPhong } from "../js/ui/renderPhong.js";
 import { renderBaiDang } from "../js/ui/renderBaiDang.js";
 import { getUser, logout } from "../js/core/auth.js";
 import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
 
 window.logout = logout;
 
@@ -60,7 +67,15 @@ if (!user || user.id == null) {
 } else {
     document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
     initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "trangchu.html");
 }
+
+const normalizeRole = (u) => {
+    const r = u?.role ?? u?.vaiTro ?? u?.authority ?? u?.authorities;
+    if (!r) return null;
+    if (Array.isArray(r)) return String(r[0] ?? "").toUpperCase();
+    return String(r).toUpperCase();
+};
 
 window.thue = async (id) => {
     const r = await thuePhong(id);
@@ -76,10 +91,93 @@ try {
 
 try {
     const posts = await getBaiDang();
-    document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : []);
+    document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
 } catch (e) {
     document.getElementById("posts").innerHTML = `<p class="empty-hint error">Không tải được bài đăng.</p>`;
 }
+
+const postsPanel = document.getElementById("posts").closest(".panel");
+const role = normalizeRole(user);
+if (role === "CHU_TRO" || role === "CHỦ TRỌ" || role === "CHUTRO") {
+    const composer = document.createElement("div");
+    composer.className = "composer";
+    composer.innerHTML = `
+        <div class="composer__head">
+            <div class="composer__title">Đăng bài</div>
+            <div id="postHint" class="muted"></div>
+        </div>
+        <div class="composer__body">
+            <textarea id="postContent" class="composer__input" rows="3" placeholder="Bạn muốn đăng gì hôm nay?"></textarea>
+            <div class="composer__actions">
+                <button id="postBtn" type="button" class="btn btn--primary">Đăng</button>
+            </div>
+        </div>
+    `;
+    postsPanel.insertBefore(composer, postsPanel.querySelector("#posts"));
+
+    const hintEl = composer.querySelector("#postHint");
+    const contentEl = composer.querySelector("#postContent");
+    const btnEl = composer.querySelector("#postBtn");
+
+    btnEl.addEventListener("click", async () => {
+        const content = contentEl.value.trim();
+        if (!content) return;
+        btnEl.disabled = true;
+        hintEl.textContent = "Đang đăng…";
+        try {
+            await taoBaiDang({ content });
+            contentEl.value = "";
+            hintEl.textContent = "Đã đăng.";
+            const posts = await getBaiDang();
+            document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
+        } catch {
+            hintEl.textContent = "Đăng thất bại.";
+        } finally {
+            btnEl.disabled = false;
+        }
+    });
+}
+
+document.getElementById("posts").addEventListener("click", (e) => {
+    const delBtn = e.target.closest?.(".js-delete-post");
+    if (delBtn) {
+        const postId = delBtn.dataset.postId;
+        if (!postId) return;
+        if (!confirm("Xóa bài đăng này?")) return;
+        delBtn.disabled = true;
+        (async () => {
+            try {
+                await xoaBaiDang(postId);
+                const posts = await getBaiDang();
+                document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : [], user);
+            } catch {
+                delBtn.disabled = false;
+                alert("Xóa thất bại.");
+            }
+        })();
+        return;
+    }
+
+    const btn = e.target.closest?.(".js-contact");
+    if (!btn) return;
+
+    const toUserId = btn.dataset.toUserId || "";
+    const postId = btn.dataset.postId || "";
+    const username = btn.dataset.username || "";
+
+    const qp = new URLSearchParams();
+    if (toUserId) qp.set("toUserId", toUserId);
+    if (postId) qp.set("postId", postId);
+    if (username) qp.set("username", username);
+
+    sessionStorage.setItem(
+        "chat_context",
+        JSON.stringify({ toUserId: toUserId || null, postId: postId || null, username: username || null })
+    );
+
+    window.location.href = `tinnhan.html${qp.toString() ? `?${qp.toString()}` : ""}`;
+});
+
 </script>
 
 </body>

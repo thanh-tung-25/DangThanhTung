@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý phòng · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
+
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Quản lý phòng</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
+
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Tình trạng phòng</h2>
+                <p class="panel__desc">Tổng quan phòng trống/đã thuê (từ <code class="inline-code">GET /api/phong</code>).</p>
+            </div>
+            <div id="stats" class="stats"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Danh sách phòng</h2>
+                <p class="panel__desc">Hiển thị theo dạng card để theo dõi nhanh.</p>
+            </div>
+            <div id="rooms" class="grid grid--rooms"></div>
+        </section>
+    </main>
+</div>
+
+<script type="module">
+import { getPhong } from "../js/modules/phong.js";
+import { renderPhong } from "../js/ui/renderPhong.js";
+import { getUser, logout } from "../js/core/auth.js";
+import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "quanlyphong.html");
+}
+
+const escapeHtml = (s) =>
+    String(s ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+const renderStats = (rooms) => {
+    const list = Array.isArray(rooms) ? rooms : [];
+    const total = list.length;
+    const available = list.filter(r => String(r.status || "").toUpperCase() === "AVAILABLE").length;
+    const rented = list.filter(r => String(r.status || "").toUpperCase() === "RENTED").length;
+    const other = Math.max(0, total - available - rented);
+
+    return `
+        <div class="stat">
+            <div class="stat__label">Tổng</div>
+            <div class="stat__value">${escapeHtml(total)}</div>
+        </div>
+        <div class="stat stat--success">
+            <div class="stat__label">Còn trống</div>
+            <div class="stat__value">${escapeHtml(available)}</div>
+        </div>
+        <div class="stat stat--danger">
+            <div class="stat__label">Đã thuê</div>
+            <div class="stat__value">${escapeHtml(rented)}</div>
+        </div>
+        <div class="stat">
+            <div class="stat__label">Khác</div>
+            <div class="stat__value">${escapeHtml(other)}</div>
+        </div>
+    `;
+};
+
+try {
+    const rooms = await getPhong();
+    document.getElementById("stats").innerHTML = renderStats(rooms);
+    // renderPhong có nút "thue", không dùng trong quản lý phòng, nhưng vẫn ok cho UI demo.
+    document.getElementById("rooms").innerHTML = renderPhong(Array.isArray(rooms) ? rooms : []);
+} catch (e) {
+    document.getElementById("stats").innerHTML = `<p class="empty-hint error">Không tải được dữ liệu phòng.</p>`;
+    document.getElementById("rooms").innerHTML = `<p class="empty-hint error">Không tải được danh sách phòng.</p>`;
+}
+</script>
+
+</body>
+</html>
+

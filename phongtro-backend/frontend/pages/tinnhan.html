@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tin nhắn · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
+
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Tin nhắn</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
+</header>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div class="app-shell">
+    <aside class="sidebar" aria-label="Menu">
+        <nav id="sidebarNav" class="sidebar__nav"></nav>
+    </aside>
+
+    <main class="layout layout--with-sidebar">
+        <section class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Tin nhắn</h2>
+                <p class="panel__desc">Trang chat realtime (sẽ nối WebSocket/Redis PubSub). Bạn có thể điều hướng từ nút “Liên hệ” ở bài đăng sang đây.</p>
+            </div>
+
+            <div id="chatContext" class="empty-hint">UI chat sẽ được dựng tiếp theo (danh sách hội thoại, khung chat, gửi tin nhắn).</div>
+        </section>
+    </main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script type="module">
+import { getUser, logout } from "../js/core/auth.js";
+import { taoCuocTroChuyen, guiTinNhan } from "../js/modules/chat.js";
+import { initSocket } from "../js/socket/socket.js";
+import { renderSidebar } from "../js/ui/sidebar.js";
+
+window.logout = logout;
+
+const user = getUser();
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+    renderSidebar(document.getElementById("sidebarNav"), user, "tinnhan.html");
+}
+
+const ctxEl = document.getElementById("chatContext");
+const qp = new URLSearchParams(window.location.search);
+const toUserId = qp.get("toUserId");
+const username = qp.get("username");
+const postId = qp.get("postId");
+let stored = null;
+try {
+    stored = JSON.parse(sessionStorage.getItem("chat_context") || "null");
+} catch {}
+
+const finalToUserId = toUserId || stored?.toUserId || "";
+const finalUsername = username || stored?.username || "";
+const finalPostId = postId || stored?.postId || "";
+
+if (finalToUserId || finalUsername || finalPostId) {
+    ctxEl.innerHTML = `
+        <div><b>Đang mở chat</b></div>
+        <div style="margin-top:6px; color: var(--muted); font-size: .92rem;">
+            ${finalUsername ? `Với: <span class="inline-code">${finalUsername}</span>` : ""}
+            ${finalToUserId ? ` ${finalUsername ? "·" : ""} toUserId: <span class="inline-code">${finalToUserId}</span>` : ""}
+            ${finalPostId ? ` · từ bài đăng: <span class="inline-code">#${finalPostId}</span>` : ""}
+        </div>
+    `;
+}
+
+if (finalToUserId) {
+    const panel = ctxEl.closest(".panel");
+    const holder = document.createElement("div");
+    holder.className = "chat-shell";
+    holder.innerHTML = `
+        <div class="chat-shell__head">
+            <div class="chat-shell__title">Soạn tin nhắn</div>
+            <div id="chatStatus" class="muted"></div>
+        </div>
+        <div class="chat-shell__composer">
+            <textarea id="msgInput" class="chat-input" rows="3" placeholder="Nhập tin nhắn…"></textarea>
+            <button id="sendBtn" class="btn btn--primary">Gửi</button>
+        </div>
+    `;
+    panel.appendChild(holder);
+
+    const statusEl = holder.querySelector("#chatStatus");
+    statusEl.textContent = "Đang tạo cuộc trò chuyện…";
+    const convo = await taoCuocTroChuyen(Number(finalToUserId));
+    const conversationId = convo?.conversation_id ?? convo?.id ?? convo?.room_id ?? null;
+    statusEl.textContent = conversationId ? `conversationId: ${conversationId}` : "Đã sẵn sàng gửi.";
+
+    holder.querySelector("#sendBtn").addEventListener("click", async () => {
+        const input = holder.querySelector("#msgInput");
+        const content = input.value.trim();
+        if (!content) return;
+        statusEl.textContent = "Đang gửi…";
+        try {
+            const payload = {
+                to_user_id: Number(finalToUserId),
+                content,
+                ...(conversationId ? { conversation_id: conversationId } : {}),
+                ...(finalPostId ? { post_id: finalPostId } : {})
+            };
+            await guiTinNhan(payload);
+            input.value = "";
+            statusEl.textContent = "Đã gửi.";
+        } catch {
+            statusEl.textContent = "Gửi thất bại.";
+        }
+    });
+}
+</script>
+
+</body>
+</html>
+
