@@ -2,17 +2,35 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Đăng nhập</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng nhập · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
 </head>
-<body>
+<body class="auth-page">
 
-<h2>Đăng nhập</h2>
+<div class="auth-shell">
+    <div class="auth-brand">
+        <span class="auth-brand__icon" aria-hidden="true">⌂</span>
+        <h1 class="auth-brand__title">Phòng trọ</h1>
+        <p class="auth-brand__subtitle">Đăng nhập để xem phòng, bài đăng và thông báo.</p>
+    </div>
 
-<form id="loginForm">
-    <input type="email" id="email" placeholder="Email" required />
-    <input type="password" id="password" placeholder="Mật khẩu" required />
-    <button type="submit">Đăng nhập</button>
-</form>
+    <div class="auth-card">
+        <h2 class="auth-card__heading">Đăng nhập</h2>
+        <form id="loginForm" class="auth-form" novalidate>
+            <label class="field">
+                <span class="field__label">Tên đăng nhập</span>
+                <input type="text" id="username" name="username" autocomplete="username" required placeholder="Nhập username" />
+            </label>
+            <label class="field">
+                <span class="field__label">Mật khẩu</span>
+                <input type="password" id="password" name="password" autocomplete="current-password" required placeholder="••••••••" />
+            </label>
+            <button type="submit" class="btn btn--primary btn--block">Đăng nhập</button>
+        </form>
+        <p class="auth-footnote">API: <code class="inline-code">POST /api/auth/login</code> với <code class="inline-code">username</code>, <code class="inline-code">password</code>.</p>
+    </div>
+</div>
 
 <script type="module">
     import { login } from "../js/core/auth.js";
@@ -22,18 +40,15 @@
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const email = document.getElementById("email").value;
+        const username = document.getElementById("username").value.trim();
         const password = document.getElementById("password").value;
 
-        try {
-            const res = await login(email, password);
+        const result = await login(username, password);
 
-            alert("Login thành công");
-
+        if (result.ok) {
             window.location.href = "trangchu.html";
-
-        } catch (err) {
-            alert("Sai tài khoản hoặc lỗi server");
+        } else {
+            alert(result.message);
         }
     });
 </script>

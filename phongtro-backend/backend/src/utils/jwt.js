@@ -9,6 +9,11 @@ const generateToken = (payload) => {
 const verifyToken = (token) => {
     return jwt.verify(token, process.env.JWT_SECRET);
 };
+
+/** Access token từ login (generateAccessToken) — dùng trong middleware */
+const verifyAccessToken = (token) => {
+    return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+};
 // ADD thêm
 const generateAccessToken = (payload) => {
     return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
@@ -22,9 +27,12 @@ const generateRefreshToken = (payload) => {
     });
 };
 
-// ADD vào export
-module.exports.generateAccessToken = generateAccessToken;
-module.exports.generateRefreshToken = generateRefreshToken;
-module.exports = { generateToken, verifyToken };
+module.exports = {
+    generateToken,
+    verifyToken,
+    verifyAccessToken,
+    generateAccessToken,
+    generateRefreshToken
+};
 
 

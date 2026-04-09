@@ -63,7 +63,15 @@ await db.query(
     }
 );
 
-return { accessToken, refreshToken };
+return {
+        accessToken,
+        refreshToken,
+        user: {
+            id: user.id,
+            username: user.username,
+            role: user.role
+        }
+    };
 };
 
 module.exports = {

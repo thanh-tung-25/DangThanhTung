@@ -1,11 +1,6 @@
 ﻿const router = require("express").Router();
 
-const {
-    register,
-    login,
-    refreshToken,
-    logout
-} = require("../controllers/auth.controller");
+const { register, login } = require("../controllers/auth.controller");
 
 const {
     authenticate,
@@ -27,7 +22,5 @@ router.get(
         res.json({ message: "Admin access" });
     }
 );
-console.log("refreshToken:", refreshToken);
-console.log("logout:", logout);
 module.exports = router;
 

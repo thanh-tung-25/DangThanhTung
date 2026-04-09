@@ -1,23 +1,46 @@
 <!DOCTYPE html>
-<html>
-<link rel="stylesheet" href="../assets/css/main.css">
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Trang chủ · Phòng trọ</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body class="app-body">
 
-<body>
-
-<header class="header">
-    <h2>🏠 Phòng trọ</h2>
-    <button onclick="logout()">Logout</button>
+<header class="topbar">
+    <div class="topbar__brand">
+        <span class="topbar__logo" aria-hidden="true">⌂</span>
+        <div>
+            <div class="topbar__title">Phòng trọ</div>
+            <div class="topbar__tagline">Danh sách phòng & bài đăng</div>
+        </div>
+    </div>
+    <div class="topbar__actions">
+        <span id="userLabel" class="user-pill"></span>
+        <button type="button" class="btn btn--ghost" onclick="logout()">Đăng xuất</button>
+    </div>
 </header>
 
-<div id="toast" class="toast"></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-<div class="container">
-    <h3>Phòng</h3>
-    <div id="rooms" class="grid"></div>
+<main class="layout">
+    <section class="panel">
+        <div class="panel__head">
+            <h2 class="panel__title">Phòng cho thuê</h2>
+            <p class="panel__desc">Dữ liệu từ <code class="inline-code">GET /api/phong</code>. Nút thuê gọi <code class="inline-code">POST /api/hopdong</code> (yêu cầu vai trò <code class="inline-code">NGUOI_THUE</code>).</p>
+        </div>
+        <div id="rooms" class="grid grid--rooms"></div>
+    </section>
 
-    <h3>Bài đăng</h3>
-    <div id="posts"></div>
-</div>
+    <section class="panel">
+        <div class="panel__head">
+            <h2 class="panel__title">Bài đăng</h2>
+            <p class="panel__desc">Từ <code class="inline-code">GET /api/baidang</code> (kèm <code class="inline-code">username</code> từ server).</p>
+        </div>
+        <div id="posts" class="stack stack--posts"></div>
+    </section>
+</main>
 
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 
@@ -32,22 +55,31 @@ import { initSocket } from "../js/socket/socket.js";
 window.logout = logout;
 
 const user = getUser();
-if (!user) location.href = "dangnhap.html";
-
-initSocket(user.id);
-
-// load phòng
-const rooms = await getPhong();
-document.getElementById("rooms").innerHTML = renderPhong(rooms);
+if (!user || user.id == null) {
+    window.location.href = "dangnhap.html";
+} else {
+    document.getElementById("userLabel").textContent = user.username || "Đã đăng nhập";
+    initSocket(user.id);
+}
 
 window.thue = async (id) => {
-    await thuePhong(id);
-    alert("Đã gửi yêu cầu thuê");
+    const r = await thuePhong(id);
+    alert(r.message || "Đã xử lý yêu cầu.");
 };
 
-// load bài đăng
-const posts = await getBaiDang();
-document.getElementById("posts").innerHTML = renderBaiDang(posts);
+try {
+    const rooms = await getPhong();
+    document.getElementById("rooms").innerHTML = renderPhong(Array.isArray(rooms) ? rooms : []);
+} catch (e) {
+    document.getElementById("rooms").innerHTML = `<p class="empty-hint error">Không tải được danh sách phòng.</p>`;
+}
+
+try {
+    const posts = await getBaiDang();
+    document.getElementById("posts").innerHTML = renderBaiDang(Array.isArray(posts) ? posts : []);
+} catch (e) {
+    document.getElementById("posts").innerHTML = `<p class="empty-hint error">Không tải được bài đăng.</p>`;
+}
 </script>
 
 </body>

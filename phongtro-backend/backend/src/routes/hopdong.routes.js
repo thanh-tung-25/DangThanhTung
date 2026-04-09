@@ -1,7 +1,6 @@
 ﻿const router = require("express").Router();
 
-const { tao , xacNhan  } = require("../controllers/hopdong.controller");
-const { taoHopDong, xacNhanHopDong } = require("../services/hopdong.service");
+const { tao, xacNhan } = require("../controllers/hopdong.controller");
 const {
     authenticate,
     authorize
