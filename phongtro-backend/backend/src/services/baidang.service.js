@@ -2,12 +2,12 @@ const db = require("../config/db");
 
 // TAO BAI DANG
 const taoBaiDang = async (data, user) => {
-    const { phong_id, noi_dung } = data;
+    const { phong_id, noi_dung, province, district, ward } = data;
 
     await db.query(
-        "INSERT INTO posts (user_id, room_id, content) VALUES (?, ?, ?)",
+        "INSERT INTO posts (user_id, room_id, content, province, district, ward) VALUES (?, ?, ?, ?, ?, ?)",
         {
-            replacements: [user.id, phong_id, noi_dung]
+            replacements: [user.id, phong_id, noi_dung, province || null, district || null, ward || null]
         }
     );
 };
@@ -34,8 +34,20 @@ const xoaBaiDang = async (id, user) => {
     );
 };
 
+// SUA
+const suaBaiDang = async (id, data, user) => {
+    const { noi_dung, province, district, ward } = data;
+    await db.query(
+        "UPDATE posts SET content = ?, province = ?, district = ?, ward = ? WHERE id = ? AND user_id = ?",
+        {
+            replacements: [noi_dung, province || null, district || null, ward || null, id, user.id]
+        }
+    );
+};
+
 module.exports = {
     taoBaiDang,
     layTatCa,
-    xoaBaiDang
+    xoaBaiDang,
+    suaBaiDang
 };

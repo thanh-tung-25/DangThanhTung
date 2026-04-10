@@ -75,7 +75,8 @@
                 <div class="room-card__price" data-field="price">0 đ</div>
                 <p class="room-card__desc" data-field="desc">Mô tả chi tiết phòng...</p>
                 <div style="margin-top:auto; display:flex; gap:8px;">
-                    <button class="btn btn--ghost btn--sm btn--block btn-action">Sửa đổi</button>
+                    <button class="btn btn--sm btn--block btn-action" style="background:var(--accent); color:white;">Sửa đổi</button>
+                    <button class="btn btn--danger btn--sm btn--block btn-del" style="background:var(--danger); color:white;">Xoá</button>
                 </div>
             </div>
         </template>
@@ -88,8 +89,13 @@
         const btnShowAdd = document.getElementById("btnShowAddRoom");
         const formDiv = document.getElementById("add-room-form");
         const btnCancel = document.getElementById("btnCancelAdd");
+        let currentEditingRoomId = null;
 
         btnShowAdd.addEventListener("click", () => {
+            currentEditingRoomId = null;
+            document.getElementById("formRoom").reset();
+            document.querySelector("#add-room-form .composer__title").textContent = "Khởi tạo phòng mới";
+            document.getElementById("btnSaveRoom").textContent = "Lưu phòng";
             formDiv.style.display = "block";
             btnShowAdd.style.display = "none";
         });
@@ -98,9 +104,10 @@
             formDiv.style.display = "none";
             btnShowAdd.style.display = "inline-flex";
             document.getElementById("formRoom").reset();
+            currentEditingRoomId = null;
         });
 
-        // Form Tạo Phòng
+        // Form Tạo/Sửa Phòng
         document.getElementById("formRoom").addEventListener("submit", async(e) => {
             e.preventDefault();
             const btn = document.getElementById("btnSaveRoom");
@@ -114,12 +121,17 @@
             };
 
             try {
-                await fetchAPI("/phong", "POST", body);
-                showToast("Đã tạo phòng thành công!");
+                if (currentEditingRoomId) {
+                    await fetchAPI(`/phong/${currentEditingRoomId}`, "PUT", body);
+                    showToast("Đã cập nhật thông tin phòng!");
+                } else {
+                    await fetchAPI("/phong", "POST", body);
+                    showToast("Đã tạo phòng thành công!");
+                }
                 btnCancel.click();
                 loadRooms();
             } catch(err) {
-                showToast(err.message || "Lỗi khi tạo phòng", "error");
+                showToast(err.message || "Lỗi khi xử lý thao tác", "error");
             } finally {
                 btn.disabled = false;
             }
@@ -165,7 +177,31 @@
                     const btnSua = node.querySelector('.btn-action');
                     if (btnSua) {
                         btnSua.onclick = () => {
-                            showToast("Chức năng sửa đổi đang được cập nhật...", "success");
+                            currentEditingRoomId = room.id;
+                            document.getElementById("rName").value = room.title;
+                            document.getElementById("rPrice").value = room.price;
+                            document.getElementById("rDesc").value = room.description || "";
+                            
+                            document.querySelector("#add-room-form .composer__title").textContent = `Cập nhật: ${room.title}`;
+                            document.getElementById("btnSaveRoom").textContent = "Lưu cập nhật";
+                            
+                            formDiv.style.display = "block";
+                            btnShowAdd.style.display = "none";
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        };
+                    }
+                    
+                    const btnXoa = node.querySelector('.btn-del');
+                    if (btnXoa) {
+                        btnXoa.onclick = async () => {
+                            if(!confirm(`Xoá vĩnh viễn phòng ${room.title}? Dữ liệu sẽ biến mất!`)) return;
+                            try {
+                                await fetchAPI(`/phong/${room.id}`, "DELETE");
+                                showToast("Đã xoá phòng!");
+                                loadRooms();
+                            } catch(err) {
+                                showToast("Lỗi: " + err.message, "error");
+                            }
                         };
                     }
 

@@ -5,7 +5,8 @@ const {
     layTatCa,
     layCuaToi,
     xoa,
-    capNhatTrangThaiPhong
+    capNhatTrangThaiPhong,
+    sua
 } = require("../controllers/phong.controller");
 
 const {
@@ -24,6 +25,9 @@ router.get("/me", authenticate, authorize("CHU_TRO"), layCuaToi);
 
 // XOÁ PHÒNG
 router.delete("/:id", authenticate, authorize("CHU_TRO", "ADMIN"), xoa);
+
+// SỬA PHÒNG
+router.put("/:id", authenticate, authorize("CHU_TRO", "ADMIN"), sua);
 
 // CẬP NHẬT TRẠNG THÁI
 router.patch(

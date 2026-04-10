@@ -30,29 +30,119 @@
                         <span data-field="roomName">Phòng 102</span>
                         <span class="badge badge--muted" data-field="date">01/01</span>
                     </div>
+                    <div data-field="locationBadge" style="color:var(--accent); font-size:13px; margin: 4px 0;"></div>
                     <div class="list-item__meta" data-field="content" style="white-space:pre-wrap;">
                         Nội dung bài viết...
                     </div>
                 </div>
                 <div class="list-item__actions">
+                    <button class="btn btn--sm btn-edit" style="background:var(--accent); color:white;">Sửa bài</button>
                     <button class="btn btn--danger btn--sm btn-del" style="background:var(--danger); color:white;">Xoá bài</button>
                 </div>
             </div>
         </template>
         
+        <!-- Post Edit Modal -->
+        <div id="editPostModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:999;">
+            <div class="modal-content" style="background:var(--bg-elevated); padding:24px; border-radius:var(--radius); width:100%; max-width:500px;">
+                <h3 style="margin-top:0;">Cập nhật bài viết</h3>
+                <form id="editPostForm" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="field">
+                        <textarea id="editPostContent" required class="composer__input" rows="4" style="width:100%; padding:10px;"></textarea>
+                    </div>
+                    <div style="font-size: 13px; color: var(--muted); margin-top: -5px;">Thay đổi lại khu vực cho bài viết này (không bắt buộc):</div>
+                    <div class="field" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <select id="editPostProvince" class="composer__input">
+                            <option value="">Tỉnh/Thành phố</option>
+                        </select>
+                        <select id="editPostDistrict" class="composer__input" disabled>
+                            <option value="">Quận/Huyện</option>
+                        </select>
+                        <select id="editPostWard" class="composer__input" disabled>
+                            <option value="">Phường/Xã</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="document.getElementById('editPostModal').style.display='none'">Hủy</button>
+                        <button type="submit" class="btn btn--primary btn--sm">Lưu Thay Đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
         import { fetchAPI, getUser, showToast } from "../js/utils/config.js";
         
         const user = getUser();
+        
+        function setupLocationAPI(provId, distId, wardId) {
+            const pSel = document.getElementById(provId);
+            const dSel = document.getElementById(distId);
+            const wSel = document.getElementById(wardId);
+
+            fetch("https://provinces.open-api.vn/api/p/")
+                .then(r => r.json())
+                .then(data => {
+                    data.forEach(p => {
+                        const opt = document.createElement("option");
+                        opt.value = p.code;
+                        opt.textContent = p.name;
+                        pSel.appendChild(opt);
+                    });
+                }).catch(()=>{});
+
+            pSel.addEventListener("change", (e) => {
+                const code = e.target.value;
+                dSel.innerHTML = '<option value="">Quận/Huyện</option>';
+                wSel.innerHTML = '<option value="">Phường/Xã</option>';
+                wSel.disabled = true;
+                if(!code) {
+                    dSel.disabled = true;
+                    return;
+                }
+                dSel.disabled = false;
+                fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.districts.forEach(d => {
+                            const opt = document.createElement("option");
+                            opt.value = d.code;
+                            opt.textContent = d.name;
+                            dSel.appendChild(opt);
+                        });
+                    });
+            });
+
+            dSel.addEventListener("change", (e) => {
+                const code = e.target.value;
+                wSel.innerHTML = '<option value="">Phường/Xã</option>';
+                if(!code) {
+                    wSel.disabled = true;
+                    return;
+                }
+                wSel.disabled = false;
+                fetch(`https://provinces.open-api.vn/api/d/${code}?depth=2`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.wards.forEach(w => {
+                            const opt = document.createElement("option");
+                            opt.value = w.code;
+                            opt.textContent = w.name;
+                            wSel.appendChild(opt);
+                        });
+                    });
+            });
+        }
+        setupLocationAPI("editPostProvince", "editPostDistrict", "editPostWard");
 
         async function loadMyPosts() {
             const container = document.getElementById("posts-container");
             try {
-                // Giả lập API fetch các bài của chính mình hoặc filter frontend
+                // Lọc bài của riêng mình (dữ liệu backend trả về dạng phẳng: p.user_id)
                 const posts = await fetchAPI("/baidang").catch(e => []); 
-                const myPosts = posts.filter(p => p.nguoi_dang?.id === user.id);
+                const myPosts = posts.filter(p => p.user_id === user.id);
 
                 if(!myPosts || myPosts.length === 0) {
                     container.innerHTML = '<div class="empty-hint">Bạn chưa có bài đăng nào.</div>';
@@ -64,14 +154,51 @@
 
                 myPosts.forEach(p => {
                     const node = tmpl.content.cloneNode(true);
-                    node.querySelector('[data-field="roomName"]').textContent = p.phong?.ten_phong || "Tin tổng hợp";
-                    node.querySelector('[data-field="date"]').textContent = new Date(p.createdAt).toLocaleDateString("vi-VN");
-                    node.querySelector('[data-field="content"]').textContent = p.noi_dung;
+                    node.querySelector('[data-field="roomName"]').textContent = p.ten_phong || "Tin tổng hợp";
+                    node.querySelector('[data-field="date"]').textContent = new Date(p.created_at).toLocaleDateString("vi-VN");
+                    node.querySelector('[data-field="content"]').textContent = p.content;
                     
+                    const locNode = node.querySelector('[data-field="locationBadge"]');
+                    const locArr = [p.ward, p.district, p.province].filter(Boolean);
+                    if (locArr.length > 0) {
+                        locNode.innerHTML = `📍 ${locArr.join(", ")}`;
+                    } else {
+                        locNode.style.display = "none";
+                    }
+
+                    node.querySelector('.btn-edit').onclick = () => {
+                        document.getElementById("editPostModal").style.display = "flex";
+                        document.getElementById("editPostContent").value = p.content;
+                        document.getElementById("editPostForm").onsubmit = async (evt) => {
+                            evt.preventDefault();
+                            const newCont = document.getElementById("editPostContent").value;
+                            
+                            const pS = document.getElementById("editPostProvince");
+                            const dS = document.getElementById("editPostDistrict");
+                            const wS = document.getElementById("editPostWard");
+                            
+                            const bodyEditPayload = {
+                                noi_dung: newCont,
+                                province: pS.value ? pS.options[pS.selectedIndex].text : null,
+                                district: dS.value ? dS.options[dS.selectedIndex].text : null,
+                                ward: wS.value ? wS.options[wS.selectedIndex].text : null
+                            };
+
+                            try {
+                                await fetchAPI(`/baidang/${p.id}`, "PUT", bodyEditPayload);
+                                showToast("Đã cập nhật bài viết!");
+                                document.getElementById("editPostModal").style.display = "none";
+                                loadMyPosts();
+                            } catch(e) {
+                                showToast("Lỗi: " + e.message, "error");
+                            }
+                        }
+                    };
+
                     node.querySelector('.btn-del').onclick = async () => {
                         if(!confirm("Bạn chắc chắn muốn xoá bài viết này?")) return;
                         try {
-                            // await fetchAPI(`/baidang/${p.id}`, "DELETE");
+                            await fetchAPI(`/baidang/${p.id}`, "DELETE");
                             showToast("Đã xoá thành công!");
                             loadMyPosts(); // reload
                         } catch(e) {

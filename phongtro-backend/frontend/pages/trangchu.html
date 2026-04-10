@@ -23,8 +23,19 @@
                     <form id="postForm" class="composer__body">
                         <textarea id="postContent" class="composer__input" rows="3" placeholder="Bạn có phòng nào đang trống muốn cho thuê?..." required></textarea>
                         <div class="field" style="margin-top: 5px;">
-                            <select id="postRoom" required>
+                            <select id="postRoom" required class="composer__input">
                                 <option value="">-- Chọn phòng trống để quảng cáo --</option>
+                            </select>
+                        </div>
+                        <div class="field" style="margin-top: 5px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                            <select id="postProvince" class="composer__input">
+                                <option value="">Tỉnh/Thành phố</option>
+                            </select>
+                            <select id="postDistrict" class="composer__input" disabled>
+                                <option value="">Quận/Huyện</option>
+                            </select>
+                            <select id="postWard" class="composer__input" disabled>
+                                <option value="">Phường/Xã</option>
                             </select>
                         </div>
                         <div class="composer__actions">
@@ -58,6 +69,7 @@
                             <span class="post__sep">•</span>
                             <span data-field="createdAt">Vừa xong</span>
                         </div>
+                        <div data-field="locationBadge" style="color:var(--accent); font-size:13px; margin-top:4px;"></div>
                     </div>
                 </div>
                 <div class="post__body" data-field="content">Nội dung bài viết...</div>
@@ -65,10 +77,40 @@
                     <button class="btn btn--primary btn--sm btn-contact" data-action="contact">
                         Liên hệ chủ trọ
                     </button>
+                    <button class="btn btn--sm btn-edit" style="background:var(--accent); color:white; display:none;">Sửa bài</button>
+                    <button class="btn btn--danger btn--sm btn-del" style="background:var(--danger); color:white; display:none;">Xoá bài</button>
                 </div>
             </div>
         </template>
         
+        <!-- Post Edit Modal -->
+        <div id="editPostModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:999;">
+            <div class="modal-content" style="background:var(--bg-elevated); padding:24px; border-radius:var(--radius); width:100%; max-width:500px;">
+                <h3 style="margin-top:0;">Cập nhật bài viết</h3>
+                <form id="editPostForm" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="field">
+                        <textarea id="editPostContent" required class="composer__input" rows="4" style="width:100%; padding:10px;"></textarea>
+                    </div>
+                    <div style="font-size: 13px; color: var(--muted); margin-top: -5px;">Để trống khu vực nếu bạn không muốn cập nhật định vị.</div>
+                    <div class="field" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <select id="editPostProvince" class="composer__input">
+                            <option value="">Tỉnh/Thành phố</option>
+                        </select>
+                        <select id="editPostDistrict" class="composer__input" disabled>
+                            <option value="">Quận/Huyện</option>
+                        </select>
+                        <select id="editPostWard" class="composer__input" disabled>
+                            <option value="">Phường/Xã</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                        <button type="button" class="btn btn--ghost btn--sm" onclick="document.getElementById('editPostModal').style.display='none'">Hủy</button>
+                        <button type="submit" class="btn btn--primary btn--sm">Lưu Thay Đổi</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
     </div>
 
     <script type="module">
@@ -83,6 +125,67 @@
         if (role === "CHU_TRO") {
             composerArea.style.display = "block";
             loadMyRooms();
+            setupLocationAPI("postProvince", "postDistrict", "postWard");
+            setupLocationAPI("editPostProvince", "editPostDistrict", "editPostWard");
+        }
+
+        function setupLocationAPI(provId, distId, wardId) {
+            const pSel = document.getElementById(provId);
+            const dSel = document.getElementById(distId);
+            const wSel = document.getElementById(wardId);
+
+            fetch("https://provinces.open-api.vn/api/p/")
+                .then(r => r.json())
+                .then(data => {
+                    data.forEach(p => {
+                        const opt = document.createElement("option");
+                        opt.value = p.code;
+                        opt.textContent = p.name;
+                        pSel.appendChild(opt);
+                    });
+                }).catch(()=>{});
+
+            pSel.addEventListener("change", (e) => {
+                const code = e.target.value;
+                dSel.innerHTML = '<option value="">Quận/Huyện</option>';
+                wSel.innerHTML = '<option value="">Phường/Xã</option>';
+                wSel.disabled = true;
+                if(!code) {
+                    dSel.disabled = true;
+                    return;
+                }
+                dSel.disabled = false;
+                fetch(`https://provinces.open-api.vn/api/p/${code}?depth=2`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.districts.forEach(d => {
+                            const opt = document.createElement("option");
+                            opt.value = d.code;
+                            opt.textContent = d.name;
+                            dSel.appendChild(opt);
+                        });
+                    });
+            });
+
+            dSel.addEventListener("change", (e) => {
+                const code = e.target.value;
+                wSel.innerHTML = '<option value="">Phường/Xã</option>';
+                if(!code) {
+                    wSel.disabled = true;
+                    return;
+                }
+                wSel.disabled = false;
+                fetch(`https://provinces.open-api.vn/api/d/${code}?depth=2`)
+                    .then(r => r.json())
+                    .then(data => {
+                        data.wards.forEach(w => {
+                            const opt = document.createElement("option");
+                            opt.value = w.code;
+                            opt.textContent = w.name;
+                            wSel.appendChild(opt);
+                        });
+                    });
+            });
         }
 
         async function loadMyRooms() {
@@ -108,8 +211,20 @@
             const noi_dung = document.getElementById("postContent").value;
             const phong_id = roomSelect.value;
             
+            const pSel = document.getElementById("postProvince");
+            const dSel = document.getElementById("postDistrict");
+            const wSel = document.getElementById("postWard");
+            
+            const bodyPayload = { 
+                noi_dung, 
+                phong_id,
+                province: pSel.value ? pSel.options[pSel.selectedIndex].text : null,
+                district: dSel.value ? dSel.options[dSel.selectedIndex].text : null,
+                ward: wSel.value ? wSel.options[wSel.selectedIndex].text : null
+            };
+
             try {
-                await fetchAPI("/baidang", "POST", { noi_dung, phong_id });
+                await fetchAPI("/baidang", "POST", bodyPayload);
                 showToast("Đăng bài thành công!");
                 document.getElementById("postContent").value = "";
                 loadFeed();
@@ -141,11 +256,65 @@
                     node.querySelector('[data-field="createdAt"]').textContent = new Date(p.createdAt || p.created_at).toLocaleString("vi-VN");
                     node.querySelector('[data-field="content"]').textContent = p.noi_dung || p.content;
 
-                    // Nếu user là chủ bài viết, ẩn nút Liên Hệ
+                    const locNode = node.querySelector('[data-field="locationBadge"]');
+                    const locArr = [p.ward, p.district, p.province].filter(Boolean);
+                    if (locArr.length > 0) {
+                        locNode.innerHTML = `📍 ${locArr.join(", ")}`;
+                    } else {
+                        locNode.style.display = "none";
+                    }
+
+                    // Nếu user là chủ bài viết, ẩn nút Liên Hệ, hiện nút Sửa/Xoá
                     const authorId = p.nguoi_dang?.id || p.user_id;
                     const btnContact = node.querySelector('.btn-contact');
+                    const btnEdit = node.querySelector('.btn-edit');
+                    const btnDel = node.querySelector('.btn-del');
+
                     if (authorId === user.id) {
                         btnContact.style.display = "none";
+                        btnEdit.style.display = "inline-flex";
+                        btnDel.style.display = "inline-flex";
+
+                        btnEdit.onclick = () => {
+                            document.getElementById("editPostModal").style.display = "flex";
+                            document.getElementById("editPostContent").value = p.noi_dung || p.content;
+                            document.getElementById("editPostForm").onsubmit = async (evt) => {
+                                evt.preventDefault();
+                                const newCont = document.getElementById("editPostContent").value;
+                                
+                                const pS = document.getElementById("editPostProvince");
+                                const dS = document.getElementById("editPostDistrict");
+                                const wS = document.getElementById("editPostWard");
+                                
+                                const bodyEditPayload = {
+                                    noi_dung: newCont,
+                                    province: pS.value ? pS.options[pS.selectedIndex].text : null,
+                                    district: dS.value ? dS.options[dS.selectedIndex].text : null,
+                                    ward: wS.value ? wS.options[wS.selectedIndex].text : null
+                                };
+
+                                try {
+                                    await fetchAPI(`/baidang/${p.id}`, "PUT", bodyEditPayload);
+                                    showToast("Đã cập nhật bài viết!");
+                                    document.getElementById("editPostModal").style.display = "none";
+                                    loadFeed();
+                                } catch(e) {
+                                    showToast("Lỗi: " + e.message, "error");
+                                }
+                            }
+                        };
+
+                        btnDel.onclick = async () => {
+                            if(!confirm("Bạn chắc chắn muốn xoá bài viết này?")) return;
+                            try {
+                                await fetchAPI(`/baidang/${p.id}`, "DELETE");
+                                showToast("Đã xoá bài đăng!", "success");
+                                loadFeed();
+                            } catch(e) {
+                                showToast("Lỗi: " + e.message, "error");
+                            }
+                        };
+
                     } else {
                         btnContact.onclick = () => {
                             // Chuyển tới trang tin nhắn, query param là id của chủ bài để tự động mở chat

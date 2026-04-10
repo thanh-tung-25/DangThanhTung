@@ -1,8 +1,28 @@
 const {
     taoNhom,
     themThanhVien,
-    guiTinNhan
+    guiTinNhan,
+    layDanhSachNhom,
+    layTinNhanNhom
 } = require("../services/nhom.service");
+
+const layNhom = async (req, res) => {
+    try {
+        const data = await layDanhSachNhom(req.user);
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ message: "Loi server", error: error.message });
+    }
+};
+
+const layTinNhan = async (req, res) => {
+    try {
+        const data = await layTinNhanNhom(req.params.id, req.user.id);
+        res.json(data);
+    } catch (error) {
+        res.status(403).json({ message: error.message });
+    }
+};
 
 const tao = async (req, res) => {
     try {
@@ -41,5 +61,7 @@ const gui = async (req, res) => {
 module.exports = {
     tao,
     them,
-    gui
+    gui,
+    layNhom,
+    layTinNhan
 };
