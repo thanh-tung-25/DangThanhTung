@@ -59,7 +59,7 @@ const renderLayout = () => {
                 <span class="nav-item__icon">💬</span>
                 <span class="nav-item__label">Tin nhắn</span>
             </a>
-            <a href="hopdong.html" class="nav-item">
+            <a href="quanlyhopdong.html" class="nav-item">
                 <span class="nav-item__icon">📜</span>
                 <span class="nav-item__label">Hợp đồng của tôi</span>
             </a>

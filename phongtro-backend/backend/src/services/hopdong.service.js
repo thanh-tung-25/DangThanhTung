@@ -1,10 +1,10 @@
-﻿
+
 
 const db = require("../config/db");
 const { taoThongBao } = require("./thongbao.service");
 // TAO HOP DONG (THUE PHONG)
 const taoHopDong = async (data, user) => {
-    const { room_id, start_date, end_date } = data;
+    const { room_id, start_date, end_date, tenant_id } = data;
 
     // check phong con trong
     const [room] = await db.query(
@@ -18,6 +18,11 @@ const taoHopDong = async (data, user) => {
 
     const owner_id = room[0].owner_id;
 
+    let finalTenantId = user.id;
+    if (user.role === "CHU_TRO") {
+        finalTenantId = tenant_id; // Landlord is initiating
+    }
+
     // tao hop dong
     await db.query(
         `INSERT INTO contracts 
@@ -27,7 +32,7 @@ const taoHopDong = async (data, user) => {
             replacements: [
                 room_id,
                 owner_id,
-                user.id,
+                finalTenantId,
                 start_date,
                 end_date
             ]
@@ -91,10 +96,60 @@ const xacNhanHopDong = async (id, user) => {
     await taoThongBao(hd.tenant_id, "Hop dong da duoc xac nhan", "CONTRACT");
     };
 
+// DANH SACH HOP DONG
+const layDanhSachHopDong = async (user) => {
+    let queryStr = "";
+    let rep = [user.id];
+
+    if (user.role === "CHU_TRO") {
+        queryStr = `
+            SELECT c.*, r.title as ten_phong, r.price, 
+                   u.username as tenant_name, u.phone as tenant_phone
+            FROM contracts c
+            LEFT JOIN rooms r ON c.room_id = r.id
+            LEFT JOIN users u ON c.tenant_id = u.id
+            WHERE c.owner_id = ?
+            ORDER BY c.created_at DESC
+        `;
+    } else {
+        queryStr = `
+            SELECT c.*, r.title as ten_phong, r.price, 
+                   u.username as tenant_name, u.phone as tenant_phone
+            FROM contracts c
+            LEFT JOIN rooms r ON c.room_id = r.id
+            LEFT JOIN users u ON c.owner_id = u.id
+            WHERE c.tenant_id = ?
+            ORDER BY c.created_at DESC
+        `;
+    }
+
+    const [rows] = await db.query(queryStr, { replacements: rep });
+    return rows;
+};
+
+
+// CHI TIET HOP DONG
+const layChiTietHopDong = async (id, user) => {
+    // Can view if they are tenant or owner
+    const [rows] = await db.query(`
+        SELECT c.*, r.title as ten_phong, r.price as gia_thue, 
+               u.username as chu_tro_name, u2.username as nguoi_thue_name
+        FROM contracts c
+        JOIN rooms r ON c.room_id = r.id
+        JOIN users u ON c.owner_id = u.id
+        JOIN users u2 ON c.tenant_id = u2.id
+        WHERE c.id = ? AND (c.owner_id = ? OR c.tenant_id = ?)
+    `, { replacements: [id, user.id, user.id] });
+
+    if (rows.length === 0) throw new Error("NOT_FOUND");
+    return rows[0];
+};
 
 module.exports = {
     taoHopDong,
-    xacNhanHopDong
+    xacNhanHopDong,
+    layDanhSachHopDong,
+    layChiTietHopDong
 };
 
 

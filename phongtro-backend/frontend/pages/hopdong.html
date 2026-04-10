@@ -64,16 +64,14 @@
         
         async function loadContract() {
             const view = document.getElementById("contract-view");
+            if (!contractId) {
+                view.innerHTML = `<div class="empty-hint error">Không tìm thấy mã hợp đồng.</div>`;
+                return;
+            }
+
             try {
-                // Demo
-                const hd = {
-                    id: contractId || 1,
-                    trang_thai: role === "NGUOI_THUE" ? "CHO_KY" : "DA_KY",
-                    nguoi_thue: { fullname: "Người Thuê A", id: 2 },
-                    chu_tro: { fullname: "Chủ Trọ B" },
-                    phong: { ten_phong: "P.101", gia_thue: 3500000 },
-                    ngay_bat_dau: "2026-04-10"
-                };
+                // Tải dữ liệu thực tế
+                const hd = await fetchAPI(`/hopdong/${contractId}`);
 
                 view.innerHTML = `
                     <div class="contract-doc">
@@ -83,48 +81,57 @@
                             -------------<br>
                             HỢP ĐỒNG THUÊ PHÒNG TRỌ
                         </div>
-                        <div class="contract-meta">Mã Hợp Đồng: #HD${hd.id} | Ngày bắt đầu: ${new Date(hd.ngay_bat_dau).toLocaleDateString("vi-VN")}</div>
+                        <div class="contract-meta">Mã Hợp Đồng: #HD${hd.id} | Ngày bắt đầu: ${new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN")}</div>
 
                         <div class="contract-party">BÊN CHO THUÊ (BÊN A):</div>
-                        <p>Họ và tên: <b>${hd.chu_tro.fullname}</b></p>
+                        <p>Họ và tên: <b>${hd.chu_tro_name || "Chưa có"}</b></p>
 
                         <div class="contract-party">BÊN THUÊ (BÊN B):</div>
-                        <p>Họ và tên: <b>${hd.nguoi_thue.fullname}</b></p>
+                        <p>Họ và tên: <b>${hd.nguoi_thue_name || "Chưa có"}</b></p>
                         
                         <div class="contract-party">NỘI DUNG HỢP ĐỒNG:</div>
-                        <p>Bên A đồng ý cho Bên B thuê phòng <b>${hd.phong.ten_phong}</b>. Giá thuê thoả thuận là <b>${parseInt(hd.phong.gia_thue).toLocaleString()} VNĐ/Tháng</b>.</p>
-                        <p>Tiền phòng phải nộp trước ngày 05 hằng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
+                        <p>Bên A đồng ý cho Bên B thuê phòng <b>${hd.ten_phong}</b>. Giá thuê thoả thuận là <b>${parseInt(hd.gia_thue || 0).toLocaleString()} VNĐ/Tháng</b>.</p>
+                        <p>Tiền phòng phải nộp định kỳ hàng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
                         
                         <div style="margin-top: 40px; display:flex; justify-content:space-around; text-align:center;">
                             <div>
                                 <b>BÊN A (Chủ trọ)</b><br>
-                                <i>(Đã tạo trên hệ thống)</i>
+                                <i style="color:${hd.owner_confirmed ? 'green' : 'red'}">
+                                    ${hd.owner_confirmed ? '(Đã duyệt)' : '(Chờ duyệt)'}
+                                </i>
                             </div>
                             <div>
                                 <b>BÊN B (Người thuê)</b><br>
-                                <i style="color:${hd.trang_thai === 'DA_KY' ? 'green' : 'red'}">
-                                    ${hd.trang_thai === 'DA_KY' ? '(Đã ký xác nhận)' : '(Chờ ký xác nhận)'}
+                                <i style="color:${hd.tenant_confirmed ? 'green' : 'red'}">
+                                    ${hd.tenant_confirmed ? '(Đã ký xác nhận)' : '(Chờ ký xác nhận)'}
                                 </i>
                             </div>
                         </div>
                     </div>
                 `;
 
-                if(role === "NGUOI_THUE" && hd.trang_thai !== "DA_KY") {
-                    const btnSign = document.getElementById("btnSign");
+                const btnSign = document.getElementById("btnSign");
+                let needsMyApproval = false;
+                if (role === "CHU_TRO" && !hd.owner_confirmed) needsMyApproval = true;
+                if (role === "NGUOI_THUE" && !hd.tenant_confirmed) needsMyApproval = true;
+
+                if(needsMyApproval) {
                     btnSign.style.display = "block";
+                    btnSign.textContent = role === "CHU_TRO" ? "Duyệt HĐ" : "Đồng ý Ký Kết";
                     btnSign.onclick = async () => {
                         if(confirm("Bạn có chắc chắn chấp nhận thuê và ký bản hợp đồng này?")) {
-                            // await fetchAPI(`/hopdong/${hd.id}/xac-nhan`, "POST");
+                            await fetchAPI(`/hopdong/${hd.id}/xac-nhan`, "PATCH");
                             showToast("Bạn đã ký hợp đồng thành công!", "success");
                             btnSign.style.display = "none";
                             setTimeout(() => loadContract(), 1000);
                         }
                     };
+                } else {
+                    btnSign.style.display = "none";
                 }
 
             } catch(e) {
-                view.innerHTML = `<div class="empty-hint error">Lỗi tải dữ liệu.</div>`;
+                view.innerHTML = `<div class="empty-hint error">Lỗi tải dữ liệu. Bạn không có quyền truy cập hoặc cấu trúc chưa khởi tạo.</div>`;
             }
         }
 

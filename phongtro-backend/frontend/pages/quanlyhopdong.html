@@ -67,30 +67,40 @@
 
                 contracts.forEach(hd => {
                     const node = tmpl.content.cloneNode(true);
-                    node.querySelector('[data-field="title"]').textContent = "Hợp đồng - " + hd.phong?.ten_phong;
-                    node.querySelector('[data-field="tenant"]').textContent = hd.nguoi_thue?.fullname || "Chưa có";
-                    node.querySelector('[data-field="room"]').textContent = hd.phong?.ten_phong;
-                    node.querySelector('[data-field="date"]').textContent = new Date(hd.ngay_bat_dau).toLocaleDateString("vi-VN");
+                    node.querySelector('[data-field="title"]').textContent = "Hợp đồng - " + hd.ten_phong;
+                    
+                    // Tenant or owner name depending on who queries
+                    const partnerName = hd.tenant_name || hd.owner_name || "Khách ẩn danh";
+                    node.querySelector('[data-field="tenant"]').textContent = partnerName;
+                    
+                    node.querySelector('[data-field="room"]').textContent = hd.ten_phong + ` (${new Intl.NumberFormat('vi-VN').format(hd.price || 0)}đ)`;
+                    node.querySelector('[data-field="date"]').textContent = new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN");
                     
                     const badge = node.querySelector('[data-field="statusBadge"]');
                     const btnApprove = node.querySelector('.btn-approve');
                     
-                    if(hd.trang_thai === "DA_KY") {
-                        badge.textContent = "ĐÃ KÝ KẾT";
+                    if(hd.status === "ACTIVE") {
+                        badge.textContent = "ĐÃ HIỆU LỰC";
                         badge.className = "badge badge--success";
                         badge.style.borderColor = "var(--success)";
                         badge.style.color = "var(--success)";
-                    } else if(hd.trang_thai === "HET_HAN") {
+                    } else if(hd.status === "EXPIRED") {
                         badge.textContent = "HẾT HẠN";
                         badge.className = "badge badge--danger";
                     } else {
                         badge.textContent = "CHỜ DUYỆT";
                         badge.className = "badge badge--accent";
                         
-                        // Nếu là chủ trọ đang xem chờ duyệt -> cho phép tuỳ chọn Kích Hoạt
-                        if(role === "CHU_TRO") {
+                        let needsMyApproval = false;
+                        if (role === "CHU_TRO" && !hd.owner_confirmed) needsMyApproval = true;
+                        if (role === "NGUOI_THUE" && !hd.tenant_confirmed) needsMyApproval = true;
+
+                        if (needsMyApproval) {
                             btnApprove.style.display = "inline-flex";
+                            btnApprove.textContent = role === "CHU_TRO" ? "Duyệt HĐ" : "Ký Chấp Nhận";
                             btnApprove.onclick = () => handleApprove(hd.id);
+                        } else {
+                            badge.textContent = "CHỜ ĐỐI TÁC DUYỆT";
                         }
                     }
 
@@ -106,10 +116,10 @@
         }
 
         async function handleApprove(id) {
-            if(!confirm("Kích hoạt hợp đồng này? Phòng sẽ được chuyển sang trạng thái ĐÃ THUÊ.")) return;
+            if(!confirm("Xác nhận hợp đồng này? Phòng sẽ được chuyển sang trạng thái ĐÃ THUÊ sau khi cả 2 bên đồng ý.")) return;
             try {
-                // await fetchAPI(`/hopdong/${id}/kich-hoat`, "POST");
-                showToast("Đã kích hoạt!", "success");
+                await fetchAPI(`/hopdong/${id}/xac-nhan`, "PATCH");
+                showToast("Đã xác nhận Hợp Đồng!", "success");
                 loadContracts();
             } catch(e) {
                 showToast("Lỗi: " + e.message, "error");

@@ -129,6 +129,33 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Modal Tạo Hợp Đồng -->
+        <div id="contractModal" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:999;">
+            <div class="modal-content" style="background:var(--bg-elevated); padding:24px; border-radius:var(--radius); width:100%; max-width:400px;">
+                <h3 style="margin-top:0;">Tạo Hợp Đồng Mới</h3>
+                <form id="contractForm" style="display:flex; flex-direction:column; gap:12px;">
+                    <div class="field">
+                        <label>Chọn Phòng Đang Trống</label>
+                        <select id="contractRoom" required style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); color:white; border-radius:var(--radius-sm);">
+                            <option value="">-- Đang tải danh sách phòng --</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label>Ngày bắt đầu thuê</label>
+                        <input type="date" id="contractStartDate" required style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); color:white; border-radius:var(--radius-sm);">
+                    </div>
+                    <div class="field">
+                        <label>Ngày kết thúc (dự kiến)</label>
+                        <input type="date" id="contractEndDate" required style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); color:white; border-radius:var(--radius-sm);">
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+                        <button type="button" class="btn btn--sm" onclick="document.getElementById('contractModal').style.display='none'">Hủy</button>
+                        <button type="submit" class="btn btn--primary btn--sm">Gửi Yêu Cầu HĐ</button>
+                    </div>
+                </form>
+            </div>
+        </div>
 
     </div>
 
@@ -174,13 +201,53 @@
         async function init() {
             if (role === "CHU_TRO") {
                 btnCreateHD.style.display = "inline-block";
-                btnCreateHD.onclick = () => {
-                    const phongName = prompt("Nhập tên phòng sẽ cho thuê (vd P102):");
-                    if(phongName) {
-                        showToast(`Đã gửi yêu cầu tạo HĐ phòng ${phongName} cho người dùng này!`, "success");
-                        appendMsg('me', `[Hệ Thống] Tôi đã tạo Hợp Đồng phòng ${phongName}. Vui lòng kiểm tra Bảng Hợp Đồng của bạn.`, me.fullname || me.username);
+                btnCreateHD.onclick = async () => {
+                    if (!targetUserId) {
+                        return showToast("Vui lòng chọn một cuộc hội thoại trước!", "error");
+                    }
+                    const cModal = document.getElementById("contractModal");
+                    cModal.style.display = "flex";
+                    // fetch rooms
+                    const roomSel = document.getElementById("contractRoom");
+                    roomSel.innerHTML = '<option value="">-- Đang tải... --</option>';
+                    try {
+                        const rooms = await fetchAPI("/phong/me");
+                        roomSel.innerHTML = '<option value="">-- Chọn phòng --</option>';
+                        rooms.forEach(r => {
+                            if(r.status === "AVAILABLE") {
+                                const opt = document.createElement("option");
+                                opt.value = r.id;
+                                opt.textContent = `${r.title} (Giá: ${r.price})`;
+                                roomSel.appendChild(opt);
+                            }
+                        });
+                    } catch(err) {
+                        roomSel.innerHTML = '<option value="">Lỗi tải phòng</option>';
                     }
                 };
+
+                document.getElementById("contractForm").addEventListener("submit", async (e) => {
+                    e.preventDefault();
+                    const room_id = document.getElementById("contractRoom").value;
+                    const start_date = document.getElementById("contractStartDate").value;
+                    const end_date = document.getElementById("contractEndDate").value;
+                    const roomInfo = document.getElementById("contractRoom").options[document.getElementById("contractRoom").selectedIndex].text;
+                    
+                    try {
+                        await fetchAPI("/hopdong", "POST", {
+                            room_id, start_date, end_date, tenant_id: targetUserId
+                        });
+                        document.getElementById("contractModal").style.display = "none";
+                        showToast("Tạo hợp đồng để đối tác duyệt thành công!", "success");
+                        
+                        // Send chat message
+                        const text = `[Hệ Thống] Tôi đã tạo Hợp Đồng cho phòng ${roomInfo}. Vui lòng kiểm tra tab Quản lý Hợp Đồng và xác nhận!`;
+                        await fetchAPI("/chat/gui", "POST", { conversation_id: currentConvoId, message: text });
+                        appendMsg('me', text, me.fullname || me.username);
+                    } catch(err) {
+                        showToast(err.message, "error");
+                    }
+                });
             }
 
             try {
