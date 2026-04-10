@@ -1,9 +1,10 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 
 const app = require("./app");
 const http = require("http");
 const { Server } = require("socket.io");
 const { setIO } = require("./services/thongbao.service");
+const { setChatIO } = require("./services/chat.service");
 
 const sequelize = require("./config/db");
 
@@ -25,6 +26,7 @@ const io = new Server(server, {
 
 // 👉 GẮN IO VÀO SERVICE
 setIO(io);
+setChatIO(io);
 
 // 👉 SOCKET EVENT
 io.on("connection", (socket) => {

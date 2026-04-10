@@ -107,10 +107,10 @@
             btn.disabled = true;
 
             const body = {
-                ten_phong: document.getElementById("rName").value,
-                gia_thue: document.getElementById("rPrice").value,
-                mo_ta: document.getElementById("rDesc").value,
-                trang_thai: "TRONG" // Mặc định
+                title: document.getElementById("rName").value,
+                price: document.getElementById("rPrice").value,
+                description: document.getElementById("rDesc").value,
+                status: "AVAILABLE"
             };
 
             try {
@@ -119,7 +119,7 @@
                 btnCancel.click();
                 loadRooms();
             } catch(err) {
-                showToast(err.message, "error");
+                showToast(err.message || "Lỗi khi tạo phòng", "error");
             } finally {
                 btn.disabled = false;
             }
@@ -128,7 +128,7 @@
         async function loadRooms() {
             const container = document.getElementById("rooms-container");
             try {
-                const rooms = await fetchAPI("/phong");
+                const rooms = await fetchAPI("/phong/me");
                 if(!rooms || rooms.length === 0) {
                     container.innerHTML = '<div class="empty-hint" style="grid-column: 1/-1;">Chưa có phòng nào.</div>';
                     // Reset stats
@@ -146,12 +146,12 @@
 
                 rooms.forEach(room => {
                     const node = tmpl.content.cloneNode(true);
-                    node.querySelector('[data-field="name"]').textContent = room.ten_phong;
-                    node.querySelector('[data-field="price"]').textContent = parseInt(room.gia_thue).toLocaleString() + " đ";
-                    node.querySelector('[data-field="desc"]').textContent = room.mo_ta || "Không có mô tả.";
+                    node.querySelector('[data-field="name"]').textContent = room.title;
+                    node.querySelector('[data-field="price"]').textContent = parseInt(room.price).toLocaleString() + " đ";
+                    node.querySelector('[data-field="desc"]').textContent = room.description || "Không có mô tả.";
                     
                     const badge = node.querySelector('[data-field="statusBadge"]');
-                    if(room.trang_thai === "DA_THUE") {
+                    if(room.status === "OCCUPIED") {
                         badge.textContent = "ĐÃ CHO THUÊ";
                         badge.style.background = "rgba(46, 204, 113, 0.2)";
                         badge.style.color = "var(--success)";
@@ -159,6 +159,14 @@
                     } else {
                         badge.textContent = "TRỐNG";
                         empty++;
+                    }
+
+                    // Thêm sự kiện cho nút Sửa đổi
+                    const btnSua = node.querySelector('.btn-action');
+                    if (btnSua) {
+                        btnSua.onclick = () => {
+                            showToast("Chức năng sửa đổi đang được cập nhật...", "success");
+                        };
                     }
 
                     container.appendChild(node);

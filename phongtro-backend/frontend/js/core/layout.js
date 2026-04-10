@@ -103,18 +103,17 @@ const renderLayout = () => {
         </div>
     `;
 
-    // Thay thế inner HTML của thẻ gốc. Nhưng lưu ý: nếu chúng ta ghép layout bằng JS, 
-    // thì nội dung gốc của trang HTML sẽ phải được bọc trong một thẻ template hoặc render thông qua DOM.
-    // Cách an toàn nhất là append header và sidebar vào body, và bọc content cũ vào main-content.
-    
-    // Lưu lại innerHTML cũ làm content
-    const originalContent = appShell.innerHTML;
+    // Giữ nguyên các Element (để không mất event lister)
+    const fragment = document.createDocumentFragment();
+    while (appShell.firstChild) {
+        fragment.appendChild(appShell.firstChild);
+    }
     
     // Thay the HTML cua Root
     appShell.innerHTML = layoutHtml;
     
     // Đổ content cũ vào <main>
-    document.getElementById("main-content").innerHTML = originalContent;
+    document.getElementById("main-content").appendChild(fragment);
 
     // Active menu tuỳ vào URL hiện tại
     const currentPath = window.location.pathname.split("/").pop();

@@ -88,12 +88,12 @@
         async function loadMyRooms() {
             try {
                 // Fetch danh sách phòng của chủ trọ để họ chọn khi đăng bài
-                const rooms = await fetchAPI("/phong");
+                const rooms = await fetchAPI("/phong/me");
                 rooms.forEach(r => {
-                    if(r.trang_thai === "TRONG") { // chỉ đăng phòng trống
+                    if(r.status === "AVAILABLE") { // chỉ đăng phòng trống
                         const opt = document.createElement("option");
                         opt.value = r.id;
-                        opt.textContent = r.ten_phong + ` (Giá: ${r.gia_thue} đ)`;
+                        opt.textContent = r.title + ` (Giá: ${r.price} đ)`;
                         roomSelect.appendChild(opt);
                     }
                 });
@@ -134,21 +134,22 @@
                 posts.forEach(p => {
                     const node = tmpl.content.cloneNode(true);
                     
-                    const authorName = p.nguoi_dang?.fullname || "Chủ Trọ";
+                    const authorName = p.nguoi_dang?.fullname || p.fullname || p.username || "Chủ Trọ";
                     node.querySelector('[data-field="avatarInitial"]').textContent = authorName.charAt(0).toUpperCase();
                     node.querySelector('[data-field="authorName"]').textContent = authorName;
-                    node.querySelector('[data-field="roomName"]').textContent = p.phong?.ten_phong || "Phòng Trọ";
-                    node.querySelector('[data-field="createdAt"]').textContent = new Date(p.createdAt).toLocaleString("vi-VN");
-                    node.querySelector('[data-field="content"]').textContent = p.noi_dung;
+                    node.querySelector('[data-field="roomName"]').textContent = p.phong?.ten_phong || p.ten_phong || "Phòng Trọ";
+                    node.querySelector('[data-field="createdAt"]').textContent = new Date(p.createdAt || p.created_at).toLocaleString("vi-VN");
+                    node.querySelector('[data-field="content"]').textContent = p.noi_dung || p.content;
 
                     // Nếu user là chủ bài viết, ẩn nút Liên Hệ
+                    const authorId = p.nguoi_dang?.id || p.user_id;
                     const btnContact = node.querySelector('.btn-contact');
-                    if (p.nguoi_dang?.id === user.id) {
+                    if (authorId === user.id) {
                         btnContact.style.display = "none";
                     } else {
                         btnContact.onclick = () => {
                             // Chuyển tới trang tin nhắn, query param là id của chủ bài để tự động mở chat
-                            window.location.href = `tinnhan.html?userId=${p.nguoi_dang.id}`;
+                            window.location.href = `tinnhan.html?userId=${authorId}`;
                         };
                     }
 

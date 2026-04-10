@@ -132,14 +132,33 @@
 
     </div>
 
-    <!-- Script WS + Socket.io Client (Mockup) -->
-    <!-- <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script> -->
+    <!-- Script WS + Socket.io Client -->
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script type="module">
-        import { fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
+        import { CONFIG, fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
         
         const role = getRole();
         const me = getUser();
         let targetUserId = null;
+        let currentConvoId = null;
+
+        const socket = io(CONFIG.WS_URL);
+        socket.on("connect", () => {
+            socket.emit("join", me.id);
+        });
+
+        socket.on("receiveMessage", (data) => {
+            if (data.conversation_id === currentConvoId) {
+                // If the message is from the active conversation, print it
+                // Need opponent name? For simplicity and speed just take from header or "Đối tác"
+                const oppName = txtTargetName.textContent.replace("Chat với: ", "");
+                appendMsg('them', data.message, oppName);
+            } else {
+                // Notify via toast if not in current convo
+                showToast("Bạn có tin nhắn mới!", "success");
+                init(); // Reload conversations list
+            }
+        });
 
         // Bóc query url param ?userId=...
         const queryParams = new URLSearchParams(window.location.search);
@@ -159,72 +178,117 @@
                     const phongName = prompt("Nhập tên phòng sẽ cho thuê (vd P102):");
                     if(phongName) {
                         showToast(`Đã gửi yêu cầu tạo HĐ phòng ${phongName} cho người dùng này!`, "success");
-                        // Gửi message mockup type contract
-                        appendMsg('me', `[Hệ Thống] Tôi đã tạo Hợp Đồng phòng ${phongName}. Vui lòng kiểm tra Bảng Hợp Đồng của bạn.`);
+                        appendMsg('me', `[Hệ Thống] Tôi đã tạo Hợp Đồng phòng ${phongName}. Vui lòng kiểm tra Bảng Hợp Đồng của bạn.`, me.fullname || me.username);
                     }
                 };
             }
 
-            // Gọi API list hội thoại (Mockup)
-            const listData = [
-                { id: "guest1", name: "Trần Nhắn Tin" },
-                { id: "guest2", name: "Nguyễn Vô Danh" }
-            ];
+            try {
+                // Gọi API list hội thoại
+                const listData = await fetchAPI("/chat");
 
-            if(forcedTarget && !listData.find(x => x.id == forcedTarget)) {
-                listData.unshift({ id: forcedTarget, name: "Người nhận mới" });
-            }
+                if(forcedTarget && !listData.find(x => x.opponent_id == forcedTarget)) {
+                    // Nếu bắt ép target nhưng chưa có trong list, thêm giả vào
+                    listData.unshift({ opponent_id: forcedTarget, name: "Người nhận mới" });
+                }
 
-            const cList = document.getElementById("conversations");
-            cList.innerHTML = "";
-            listData.forEach(c => {
-                const div = document.createElement("div");
-                div.className = "conv-item" + (c.id == forcedTarget ? " active" : "");
-                div.innerHTML = `
-                    <div class="conv-avatar">${c.name.charAt(0)}</div>
-                    <div><b>${c.name}</b></div>
-                `;
-                div.onclick = () => {
-                    document.querySelectorAll(".conv-item").forEach(x => x.classList.remove('active'));
-                    div.classList.add('active');
-                    openChat(c.id, c.name);
-                };
-                cList.appendChild(div);
-            });
+                const cList = document.getElementById("conversations");
+                cList.innerHTML = "";
+                
+                if (listData.length === 0) {
+                    cList.innerHTML = '<div class="empty-hint" style="border:none; margin:10px;">Chưa có hội thoại.</div>';
+                }
 
-            if(forcedTarget) {
-                openChat(forcedTarget, listData[0].name);
+                listData.forEach(c => {
+                    const div = document.createElement("div");
+                    div.className = "conv-item" + (c.opponent_id == forcedTarget ? " active" : "");
+                    div.innerHTML = `
+                        <div class="conv-avatar">${c.name.charAt(0).toUpperCase()}</div>
+                        <div><b>${c.name}</b></div>
+                    `;
+                    div.onclick = () => {
+                        document.querySelectorAll(".conv-item").forEach(x => x.classList.remove('active'));
+                        div.classList.add('active');
+                        openChat(c.opponent_id, c.name);
+                    };
+                    cList.appendChild(div);
+                });
+
+                if(forcedTarget) {
+                    const targetName = listData.find(x => x.opponent_id == forcedTarget)?.name || "Đối tác";
+                    openChat(forcedTarget, targetName);
+                }
+            } catch (err) {
+                console.error(err);
             }
         }
 
-        function openChat(id, name) {
+        async function openChat(id, name) {
             targetUserId = id;
             txtTargetName.textContent = "Chat với: " + name;
             msgInput.disabled = false;
             btnSend.disabled = false;
-            chatMsgs.innerHTML = `<div style="text-align:center; color:var(--muted); font-size:0.85em;">Cuộc hội thoại đã được mã hoá đầu cuối.</div>`;
+            chatMsgs.innerHTML = `<div style="text-align:center; color:var(--muted); font-size:0.85em;">Đang tải tin nhắn...</div>`;
             
-            // fetch history here...
-            appendMsg('them', `Chào bạn, mình muốn hỏi về phòng.`);
+            try {
+                // Tạo hoặc lấy ID hội thoại
+                const res = await fetchAPI("/chat/tao", "POST", { user_id: id });
+                currentConvoId = res.conversation_id;
+
+                // Load lịch sử
+                const history = await fetchAPI(`/chat/${currentConvoId}`);
+                chatMsgs.innerHTML = `<div style="text-align:center; color:var(--muted); font-size:0.85em; margin-bottom: 12px;">Cuộc hội thoại đã được mã hoá đầu cuối.</div>`;
+                
+                history.forEach(m => {
+                    const isMe = m.sender_id === me.id;
+                    appendMsg(isMe ? 'me' : 'them', m.message, isMe ? (me.fullname || me.username) : m.name);
+                });
+            } catch (err) {
+                chatMsgs.innerHTML = `<div style="text-align:center; color:var(--danger); font-size:0.85em;">Lỗi tải tin nhắn.</div>`;
+            }
         }
 
-        function appendMsg(who, text) {
+        function appendMsg(who, text, senderName) {
             const div = document.createElement('div');
             div.className = "msg-bubble " + (who === 'me' ? "msg-bubble--me" : "msg-bubble--them");
-            div.textContent = text;
+            
+            // Name label
+            const title = document.createElement('div');
+            title.style.fontSize = "0.75rem";
+            title.style.fontWeight = "bold";
+            title.style.opacity = "0.8";
+            title.style.marginBottom = "4px";
+            title.textContent = senderName || "Ẩn danh";
+            
+            const txt = document.createElement('div');
+            txt.textContent = text;
+            txt.style.whiteSpace = "pre-wrap";
+
+            div.appendChild(title);
+            div.appendChild(txt);
+            
             chatMsgs.appendChild(div);
             chatMsgs.scrollTop = chatMsgs.scrollHeight;
         }
 
-        document.getElementById("chatForm").addEventListener("submit", (e) => {
+        document.getElementById("chatForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const text = msgInput.value.trim();
-            if(!text) return;
+            if(!text || !currentConvoId) return;
 
-            appendMsg('me', text);
+            // Xoá input ngay để tạo cảm giác nhanh
             msgInput.value = "";
+            appendMsg('me', text, me.fullname || me.username);
             
-            // Socket io gửi tin: Socket.emit("send", { to: targetUserId, msg: text })
+            try {
+                await fetchAPI("/chat/gui", "POST", {
+                    conversation_id: currentConvoId,
+                    message: text
+                });
+                // Khi gửi DB đã gọi io.to để đẩy sang đối tác, ta không cần emit socket thủ công ở đây.
+            } catch(err) {
+                showToast("Lỗi gửi tin: " + err.message, "error");
+            }
         });
 
         window.addEventListener("load", init);
