@@ -16,9 +16,17 @@ const renderLayout = () => {
 
     if (role === "ADMIN") {
         navItems = `
+            <a href="trangchu.html" class="nav-item">
+                <span class="nav-item__icon">📋</span>
+                <span class="nav-item__label">Bài Đăng (Feed)</span>
+            </a>
+            <a href="admin.html" class="nav-item">
+                <span class="nav-item__icon">👮</span>
+                <span class="nav-item__label">Bảng Điều Khiển</span>
+            </a>
             <a href="quanlynguoidung.html" class="nav-item">
                 <span class="nav-item__icon">👥</span>
-                <span class="nav-item__label">Quản lý người dùng</span>
+                <span class="nav-item__label">Người Dùng</span>
             </a>
         `;
     } else if (role === "CHU_TRO") {

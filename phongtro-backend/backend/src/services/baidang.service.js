@@ -26,23 +26,27 @@ const layTatCa = async () => {
 
 // XOA
 const xoaBaiDang = async (id, user) => {
-    await db.query(
-        "DELETE FROM posts WHERE id = ? AND user_id = ?",
-        {
-            replacements: [id, user.id]
-        }
-    );
+    if (user.role === 'ADMIN') {
+        await db.query("DELETE FROM posts WHERE id = ?", { replacements: [id] });
+    } else {
+        await db.query("DELETE FROM posts WHERE id = ? AND user_id = ?", { replacements: [id, user.id] });
+    }
 };
 
 // SUA
 const suaBaiDang = async (id, data, user) => {
     const { noi_dung, province, district, ward } = data;
-    await db.query(
-        "UPDATE posts SET content = ?, province = ?, district = ?, ward = ? WHERE id = ? AND user_id = ?",
-        {
-            replacements: [noi_dung, province || null, district || null, ward || null, id, user.id]
-        }
-    );
+    if (user.role === 'ADMIN') {
+        await db.query(
+            "UPDATE posts SET content = ?, province = ?, district = ?, ward = ? WHERE id = ?",
+            { replacements: [noi_dung, province || null, district || null, ward || null, id] }
+        );
+    } else {
+        await db.query(
+            "UPDATE posts SET content = ?, province = ?, district = ?, ward = ? WHERE id = ? AND user_id = ?",
+            { replacements: [noi_dung, province || null, district || null, ward || null, id, user.id] }
+        );
+    }
 };
 
 module.exports = {

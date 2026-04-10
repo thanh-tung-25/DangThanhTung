@@ -48,6 +48,16 @@
             <div class="panel__head">
                 <h2 class="panel__title">Phòng Trọ Mới Nhất</h2>
                 <p class="panel__desc">Khám phá các phòng trọ đang được cho thuê</p>
+                <!-- Bộ lọc tìm kiếm -->
+                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                    <select id="filterProvince" class="composer__input" style="flex:1;">
+                        <option value="">Tất cả Tỉnh/Thành</option>
+                    </select>
+                    <select id="filterDistrict" class="composer__input" style="flex:1;" disabled>
+                        <option value="">Tất cả Quận/Huyện</option>
+                    </select>
+                    <button id="btnFilter" class="btn btn--primary" style="padding: 0 16px; border-radius:18px;">Lọc / Tìm</button>
+                </div>
             </div>
 
             <!-- Feed Bài Đăng -->
@@ -125,14 +135,17 @@
         if (role === "CHU_TRO") {
             composerArea.style.display = "block";
             loadMyRooms();
-            setupLocationAPI("postProvince", "postDistrict", "postWard");
-            setupLocationAPI("editPostProvince", "editPostDistrict", "editPostWard");
+            setupLocationAPI("postProvince", "postDistrict", "postWard", "Tỉnh/Thành phố", "Quận/Huyện", "Phường/Xã");
+            setupLocationAPI("editPostProvince", "editPostDistrict", "editPostWard", "Tỉnh/Thành phố", "Quận/Huyện", "Phường/Xã");
         }
 
-        function setupLocationAPI(provId, distId, wardId) {
+        // Bật filter cho cả hệ thống (Ai cũng xài được)
+        setupLocationAPI("filterProvince", "filterDistrict", null, "Tất cả Tỉnh/Thành", "Tất cả Quận/Huyện", "");
+
+        function setupLocationAPI(provId, distId, wardId, defaultProvInfo, defaultDistInfo, defaultWardInfo) {
             const pSel = document.getElementById(provId);
             const dSel = document.getElementById(distId);
-            const wSel = document.getElementById(wardId);
+            const wSel = wardId ? document.getElementById(wardId) : null;
 
             fetch("https://provinces.open-api.vn/api/p/")
                 .then(r => r.json())
@@ -147,9 +160,11 @@
 
             pSel.addEventListener("change", (e) => {
                 const code = e.target.value;
-                dSel.innerHTML = '<option value="">Quận/Huyện</option>';
-                wSel.innerHTML = '<option value="">Phường/Xã</option>';
-                wSel.disabled = true;
+                dSel.innerHTML = `<option value="">${defaultDistInfo}</option>`;
+                if(wSel) {
+                    wSel.innerHTML = `<option value="">${defaultWardInfo}</option>`;
+                    wSel.disabled = true;
+                }
                 if(!code) {
                     dSel.disabled = true;
                     return;
@@ -168,8 +183,9 @@
             });
 
             dSel.addEventListener("change", (e) => {
+                if(!wSel) return;
                 const code = e.target.value;
-                wSel.innerHTML = '<option value="">Phường/Xã</option>';
+                wSel.innerHTML = `<option value="">${defaultWardInfo}</option>`;
                 if(!code) {
                     wSel.disabled = true;
                     return;
@@ -233,20 +249,45 @@
             }
         });
 
-        // Load Feed Board
+        // Data Board
+        let allPosts = [];
+
         async function loadFeed() {
-            const container = document.getElementById("feed-container");
             try {
-                const posts = await fetchAPI("/baidang"); // Backend cần có GET /baidang
-                if (!posts || posts.length === 0) {
-                    container.innerHTML = '<div class="empty-hint">Chưa có bài đăng nào.</div>';
-                    return;
-                }
+                const posts = await fetchAPI("/baidang");
+                if (posts) allPosts = posts;
+                renderFeed(allPosts);
+            } catch (err) {
+                document.getElementById("feed-container").innerHTML = '<div class="empty-hint error">Lỗi tải dữ liệu.</div>';
+            }
+        }
 
-                container.innerHTML = "";
-                const tmpl = document.getElementById("post-tmpl");
+        // Handle Filter Action
+        document.getElementById("btnFilter").addEventListener("click", () => {
+            const pSel = document.getElementById("filterProvince");
+            const dSel = document.getElementById("filterDistrict");
 
-                posts.forEach(p => {
+            const provText = pSel.value ? pSel.options[pSel.selectedIndex].text : null;
+            const distText = dSel.value ? dSel.options[dSel.selectedIndex].text : null;
+
+            let filtered = allPosts;
+            if (provText) filtered = filtered.filter(p => p.province === provText);
+            if (distText) filtered = filtered.filter(p => p.district === distText);
+
+            renderFeed(filtered);
+        });
+
+        function renderFeed(postsList) {
+            const container = document.getElementById("feed-container");
+            if (!postsList || postsList.length === 0) {
+                container.innerHTML = '<div class="empty-hint">Chưa có bài đăng nào phù hợp hoặc đang rỗng.</div>';
+                return;
+            }
+
+            container.innerHTML = "";
+            const tmpl = document.getElementById("post-tmpl");
+
+            postsList.forEach(p => {
                     const node = tmpl.content.cloneNode(true);
                     
                     const authorName = p.nguoi_dang?.fullname || p.fullname || p.username || "Chủ Trọ";
@@ -269,12 +310,45 @@
                     const btnContact = node.querySelector('.btn-contact');
                     const btnEdit = node.querySelector('.btn-edit');
                     const btnDel = node.querySelector('.btn-del');
+                    const actionGroup = node.querySelector('.list-item__actions');
 
-                    if (authorId === user.id) {
+                    if (role === 'ADMIN') {
                         btnContact.style.display = "none";
                         btnEdit.style.display = "inline-flex";
                         btnDel.style.display = "inline-flex";
+                        
+                        if (authorId !== user.id) {
+                            const btnFine = document.createElement("button");
+                            btnFine.className = "btn btn--sm btn--danger";
+                            btnFine.innerHTML = "🔨 Phạt";
+                            btnFine.style.marginRight = "6px";
+                            actionGroup.prepend(btnFine);
+                            
+                            btnFine.onclick = async () => {
+                                const reason = prompt(`Nhập lý do phạt cho bài đăng này:`);
+                                if (!reason) return;
+                                const amount = prompt(`Nhập số tiền phạt (VNĐ):`);
+                                if (!amount || isNaN(amount)) return;
+                                
+                                try {
+                                    await fetchAPI("/admin/phat", "POST", { user_id: authorId, amount: parseFloat(amount), reason });
+                                    showToast("Đã lập thành công biên bản phạt!", "success");
+                                } catch(e) {
+                                    showToast("Lỗi ban phạt: " + e.message, "error");
+                                }
+                            };
+                        }
+                    } else if (authorId === user.id) {
+                        btnContact.style.display = "none";
+                        btnEdit.style.display = "inline-flex";
+                        btnDel.style.display = "inline-flex";
+                    } else {
+                        btnContact.onclick = () => {
+                            window.location.href = `tinnhan.html?userId=${authorId}`;
+                        };
+                    }
 
+                    if (role === 'ADMIN' || authorId === user.id) {
                         btnEdit.onclick = () => {
                             document.getElementById("editPostModal").style.display = "flex";
                             document.getElementById("editPostContent").value = p.noi_dung || p.content;
@@ -314,19 +388,9 @@
                                 showToast("Lỗi: " + e.message, "error");
                             }
                         };
-
-                    } else {
-                        btnContact.onclick = () => {
-                            // Chuyển tới trang tin nhắn, query param là id của chủ bài để tự động mở chat
-                            window.location.href = `tinnhan.html?userId=${authorId}`;
-                        };
                     }
-
                     container.appendChild(node);
-                });
-            } catch (err) {
-                container.innerHTML = '<div class="empty-hint error">Lỗi tải dữ liệu.</div>';
-            }
+            });
         }
 
         window.addEventListener("load", loadFeed);

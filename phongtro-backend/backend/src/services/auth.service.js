@@ -31,8 +31,8 @@ const registerService = async ({ username, password, role }) => {
 
 const loginService = async ({ username, password }) => {
     const [rows] = await db.query(
-        "SELECT * FROM users WHERE username = ?",
-        { replacements: [username] }
+        "SELECT * FROM users WHERE username = ? OR email = ?",
+        { replacements: [username, username] }
     );
 
     if (rows.length === 0) {
