@@ -1,0 +1,3 @@
+◇ injected env (12) from .env // tip: ⌘ custom filepath { path: '/custom/path/.env' }
+localhost
+root
