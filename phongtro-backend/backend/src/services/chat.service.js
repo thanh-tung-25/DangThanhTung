@@ -61,7 +61,7 @@ const guiTinNhan = async (conversation_id, sender_id, message) => {
 
 const layDanhSachHoiThoai = async (user_id) => {
     const [rows] = await db.query(`
-        SELECT c.id as conversation_id, u.username as name, cm2.user_id as opponent_id
+        SELECT c.id as conversation_id, COALESCE(u.fullname, u.username) as name, cm2.user_id as opponent_id
         FROM conversation_members cm1
         JOIN conversations c ON cm1.conversation_id = c.id
         JOIN conversation_members cm2 ON c.id = cm2.conversation_id AND cm2.user_id != cm1.user_id
@@ -74,7 +74,7 @@ const layDanhSachHoiThoai = async (user_id) => {
 
 const layLichSuTinNhan = async (conversation_id) => {
     const [rows] = await db.query(`
-        SELECT m.*, u.username as name
+        SELECT m.*, COALESCE(u.fullname, u.username) as name
         FROM messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.conversation_id = ?

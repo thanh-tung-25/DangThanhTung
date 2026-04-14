@@ -5,7 +5,16 @@ const CONFIG = {
 
 const getToken = () => localStorage.getItem("access_token");
 const getRole = () => localStorage.getItem("role");
-const getUser = () => JSON.parse(localStorage.getItem("user") || "{}");
+const getUser = () => {
+    let user = JSON.parse(localStorage.getItem("user") || "{}");
+    if (user.fullname && user.fullname.includes("Ä")) {
+        try {
+            user.fullname = decodeURIComponent(escape(user.fullname));
+            localStorage.setItem("user", JSON.stringify(user));
+        } catch(e) {}
+    }
+    return user;
+};
 
 const fetchAPI = async (endpoint, method = "GET", body = null) => {
     const headers = {

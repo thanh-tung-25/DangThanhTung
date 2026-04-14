@@ -91,7 +91,12 @@
                         
                         <div class="contract-party">NỘI DUNG HỢP ĐỒNG:</div>
                         <p>Bên A đồng ý cho Bên B thuê phòng <b>${hd.ten_phong}</b>. Giá thuê thoả thuận là <b>${parseInt(hd.gia_thue || 0).toLocaleString()} VNĐ/Tháng</b>.</p>
-                        <p>Tiền phòng phải nộp định kỳ hàng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
+                        <p>Thời hạn hợp đồng tính từ ngày: <b>${new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN")}</b> đến ngày: <b>${new Date(hd.end_date || hd.created_at).toLocaleDateString("vi-VN")}</b>.</p>
+                        
+                        <div class="contract-party">ĐIỀU KHOẢN VÀ QUY ĐỊNH PHỤ:</div>
+                        <div style="background:#f4f4f5; color:#1a1a1a; border-left:4px solid #3b82f6; padding:12px; margin-top:10px; font-style:italic; white-space:pre-wrap; border-radius: 0 4px 4px 0;">${hd.terms ? hd.terms : "Áp dụng theo quy định chung của nhà trọ."}</div>
+                        
+                        <p style="margin-top:20px;">Tiền phòng phải nộp định kỳ hàng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
                         
                         <div style="margin-top: 40px; display:flex; justify-content:space-around; text-align:center;">
                             <div>

@@ -66,7 +66,7 @@ const layTinNhanNhom = async (group_id, user_id) => {
     if (members.length === 0) throw new Error("Ban khong thuoc nhom nay");
 
     const [rows] = await db.query(`
-        SELECT m.*, u.username, u.fullname, u.role
+        SELECT m.*, COALESCE(u.fullname, u.username) as username, u.role
         FROM group_messages m
         JOIN users u ON m.sender_id = u.id
         WHERE m.group_id = ?

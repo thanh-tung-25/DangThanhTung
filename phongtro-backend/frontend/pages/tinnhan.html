@@ -149,6 +149,10 @@
                         <label>Ngày kết thúc (dự kiến)</label>
                         <input type="date" id="contractEndDate" required style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); color:white; border-radius:var(--radius-sm);">
                     </div>
+                    <div class="field">
+                        <label>Điều khoản / Quy định phụ</label>
+                        <textarea id="contractTerms" rows="4" placeholder="Ví dụ: Giá điện 4k/chữ, giá nước 100k/người, không ồn ào sau 10h đêm..." style="width:100%; padding:10px; background:var(--surface); border:1px solid var(--border); color:white; border-radius:var(--radius-sm); resize:vertical;"></textarea>
+                    </div>
                     <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
                         <button type="button" class="btn btn--sm" onclick="document.getElementById('contractModal').style.display='none'">Hủy</button>
                         <button type="submit" class="btn btn--primary btn--sm">Gửi Yêu Cầu HĐ</button>
@@ -231,11 +235,12 @@
                     const room_id = document.getElementById("contractRoom").value;
                     const start_date = document.getElementById("contractStartDate").value;
                     const end_date = document.getElementById("contractEndDate").value;
+                    const terms = document.getElementById("contractTerms").value;
                     const roomInfo = document.getElementById("contractRoom").options[document.getElementById("contractRoom").selectedIndex].text;
                     
                     try {
                         await fetchAPI("/hopdong", "POST", {
-                            room_id, start_date, end_date, tenant_id: targetUserId
+                            room_id, start_date, end_date, tenant_id: targetUserId, terms
                         });
                         document.getElementById("contractModal").style.display = "none";
                         showToast("Tạo hợp đồng để đối tác duyệt thành công!", "success");
@@ -308,7 +313,7 @@
                 
                 history.forEach(m => {
                     const isMe = m.sender_id === me.id;
-                    appendMsg(isMe ? 'me' : 'them', m.message, isMe ? (me.fullname || me.username) : m.name);
+                    appendMsg(isMe ? 'me' : 'them', m.message, m.name || (isMe ? (me.fullname || me.username) : "Ẩn danh"));
                 });
             } catch (err) {
                 chatMsgs.innerHTML = `<div style="text-align:center; color:var(--danger); font-size:0.85em;">Lỗi tải tin nhắn.</div>`;

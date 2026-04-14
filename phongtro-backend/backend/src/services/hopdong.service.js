@@ -4,7 +4,7 @@ const db = require("../config/db");
 const { taoThongBao } = require("./thongbao.service");
 // TAO HOP DONG (THUE PHONG)
 const taoHopDong = async (data, user) => {
-    const { room_id, start_date, end_date, tenant_id } = data;
+    const { room_id, start_date, end_date, tenant_id, terms } = data;
 
     // check phong con trong
     const [room] = await db.query(
@@ -26,15 +26,16 @@ const taoHopDong = async (data, user) => {
     // tao hop dong
     await db.query(
         `INSERT INTO contracts 
-        (room_id, owner_id, tenant_id, start_date, end_date) 
-        VALUES (?, ?, ?, ?, ?)`,
+        (room_id, owner_id, tenant_id, start_date, end_date, terms) 
+        VALUES (?, ?, ?, ?, ?, ?)`,
         {
             replacements: [
                 room_id,
                 owner_id,
                 finalTenantId,
                 start_date,
-                end_date
+                end_date,
+                terms || null
             ]
         }
     );
@@ -104,7 +105,7 @@ const layDanhSachHopDong = async (user) => {
     if (user.role === "CHU_TRO") {
         queryStr = `
             SELECT c.*, r.title as ten_phong, r.price, 
-                   u.username as tenant_name, u.phone as tenant_phone
+                   COALESCE(u.fullname, u.username) as tenant_name, u.phone as tenant_phone
             FROM contracts c
             LEFT JOIN rooms r ON c.room_id = r.id
             LEFT JOIN users u ON c.tenant_id = u.id
@@ -114,7 +115,7 @@ const layDanhSachHopDong = async (user) => {
     } else {
         queryStr = `
             SELECT c.*, r.title as ten_phong, r.price, 
-                   u.username as tenant_name, u.phone as tenant_phone
+                   COALESCE(u.fullname, u.username) as tenant_name, u.phone as tenant_phone
             FROM contracts c
             LEFT JOIN rooms r ON c.room_id = r.id
             LEFT JOIN users u ON c.owner_id = u.id
@@ -133,7 +134,7 @@ const layChiTietHopDong = async (id, user) => {
     // Can view if they are tenant or owner
     const [rows] = await db.query(`
         SELECT c.*, r.title as ten_phong, r.price as gia_thue, 
-               u.username as chu_tro_name, u2.username as nguoi_thue_name
+               COALESCE(u.fullname, u.username) as chu_tro_name, COALESCE(u2.fullname, u2.username) as nguoi_thue_name
         FROM contracts c
         JOIN rooms r ON c.room_id = r.id
         JOIN users u ON c.owner_id = u.id

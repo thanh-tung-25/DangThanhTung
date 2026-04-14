@@ -15,7 +15,7 @@ const taoBaiDang = async (data, user) => {
 // LAY TAT CA
 const layTatCa = async () => {
     const [rows] = await db.query(`
-        SELECT p.*, u.username, r.title as ten_phong
+        SELECT p.*, COALESCE(u.fullname, u.username) as username, r.title as ten_phong
         FROM posts p
         JOIN users u ON p.user_id = u.id
         LEFT JOIN rooms r ON p.room_id = r.id

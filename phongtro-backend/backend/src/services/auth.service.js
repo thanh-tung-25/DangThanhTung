@@ -3,7 +3,7 @@ const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const { generateToken } = require("../utils/jwt");
 
-const registerService = async ({ username, password, role }) => {
+const registerService = async ({ username, password, role, fullname }) => {
     // Nếu client gửi role tuỳ chọn hoặc thiếu, ta set mặc định NGUOI_THUE
     const targetRole = role === "CHU_TRO" || role === "ADMIN" ? role : "NGUOI_THUE";
 
@@ -22,11 +22,11 @@ const registerService = async ({ username, password, role }) => {
     );
 
     const [result] = await db.query(
-        "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-        { replacements: [username, hashedPassword, targetRole] }
+        "INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
+        { replacements: [username, hashedPassword, targetRole, fullname || null] }
     );
 
-    return { id: result.insertId, username, role: targetRole };
+    return { id: result.insertId, username, role: targetRole, fullname };
 };
 
 const loginService = async ({ username, password }) => {
@@ -72,7 +72,9 @@ return {
         user: {
             id: user.id,
             username: user.username,
-            role: user.role
+            role: user.role,
+            fullname: user.fullname,
+            email: user.email
         }
     };
 };
