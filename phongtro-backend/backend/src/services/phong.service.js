@@ -1,4 +1,4 @@
-﻿
+
 const db = require("../config/db");
 
 // TẠO PHÒNG
@@ -50,11 +50,23 @@ const capNhatTrangThai = async (id, status, user) => {
     );
 };
 
+// SỬA THÔNG TIN PHÒNG
+const suaPhong = async (id, data, user) => {
+    const { title, description, price } = data;
+    await db.query(
+        "UPDATE rooms SET title = ?, description = ?, price = ? WHERE id = ? AND owner_id = ?",
+        {
+            replacements: [title, description, price, id, user.id]
+        }
+    );
+};
+
 module.exports = {
     taoPhong,
     layTatCaPhong,
     layPhongCuaToi,
     xoaPhong,
-    capNhatTrangThai
+    capNhatTrangThai,
+    suaPhong
 };
 

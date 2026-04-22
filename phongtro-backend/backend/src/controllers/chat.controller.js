@@ -1,9 +1,11 @@
-﻿
+
 
 
 const {
     taoHoiThoai,
-    guiTinNhan
+    guiTinNhan,
+    layDanhSachHoiThoai,
+    layLichSuTinNhan
 } = require("../services/chat.service");
 
 const tao = async (req, res) => {
@@ -22,7 +24,19 @@ const gui = async (req, res) => {
     res.json({ message: "Da gui" });
 };
 
+const danhSach = async (req, res) => {
+    const data = await layDanhSachHoiThoai(req.user.id);
+    res.json(data);
+};
+
+const lichSu = async (req, res) => {
+    const data = await layLichSuTinNhan(req.params.id);
+    res.json(data);
+};
+
 module.exports = {
     tao,
-    gui
+    gui,
+    danhSach,
+    lichSu
 };

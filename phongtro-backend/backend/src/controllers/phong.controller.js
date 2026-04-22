@@ -1,4 +1,4 @@
-﻿const {
+const {
     taoPhong,
     layTatCaPhong,
     layPhongCuaToi,
@@ -47,12 +47,24 @@ const capNhatTrangThaiPhong = async (req, res) => {
     res.json({ message: "Cap nhat thanh cong" });
 };
 
+// SỬA
+const sua = async (req, res) => {
+    try {
+        const { suaPhong } = require("../services/phong.service");
+        await suaPhong(req.params.id, req.body, req.user);
+        res.json({ message: "Cap nhat thong tin phong thanh cong" });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports = {
     tao,
     layTatCa,
     layCuaToi,
     xoa,
-    capNhatTrangThaiPhong
+    capNhatTrangThaiPhong,
+    sua
 };
 
 

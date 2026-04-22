@@ -1,11 +1,6 @@
-﻿const router = require("express").Router();
+const router = require("express").Router();
 
-const {
-    register,
-    login,
-    refreshToken,
-    logout
-} = require("../controllers/auth.controller");
+const { register, login } = require("../controllers/auth.controller");
 
 const {
     authenticate,
@@ -22,12 +17,10 @@ router.get("/me", authenticate, (req, res) => {
 router.get(
     "/admin",
     authenticate,
-    authorize("admin"),
+    authorize("ADMIN"),
     (req, res) => {
         res.json({ message: "Admin access" });
     }
 );
-console.log("refreshToken:", refreshToken);
-console.log("logout:", logout);
 module.exports = router;
 

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý Hợp Đồng - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+</head>
+<body>
+    <div id="app-root">
+        
+        <div class="panel">
+            <div class="panel__head">
+                <h2 class="panel__title">Danh Sách Hợp Đồng</h2>
+                <p class="panel__desc">Quản lý các hợp đồng đã tạo trên hệ thống</p>
+            </div>
+
+            <!-- List Hợp đồng -->
+            <div class="list" id="contracts-container">
+                <div class="empty-hint">Đang tải dữ liệu...</div>
+            </div>
+
+        </div>
+
+        <template id="contract-tmpl">
+            <div class="list-item">
+                <div class="list-item__main">
+                    <div class="list-item__title">
+                        <span data-field="title">Hợp đồng thuê phòng</span>
+                        <span class="badge" data-field="statusBadge">CHỜ PHÊ DUYỆT</span>
+                    </div>
+                    <div class="list-item__meta">
+                        👤 Người thuê: <span data-field="tenant">Nguyễn Văn A</span> &bull;
+                        🏠 Phòng: <span data-field="room">P.101</span> &bull;
+                        📅 Bắt đầu: <span data-field="date">01/01/2026</span>
+                    </div>
+                </div>
+                <div class="list-item__actions">
+                    <button class="btn btn--primary btn--sm btn-view">Xem chi tiết</button>
+                    <!-- Chỉ hiện nút Xác Nhận / Hủy nếu ở trạng thái cần -->
+                    <button class="btn btn--success btn--sm btn-approve" style="display:none; background: var(--success); color: white;">Kích Hoạt</button>
+                </div>
+            </div>
+        </template>
+        
+    </div>
+
+    <script type="module">
+        import { fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
+        
+        const role = getRole();
+        
+        async function loadContracts() {
+            const container = document.getElementById("contracts-container");
+            try {
+                // Fetch hợp đồng (Cần API GET /hopdong để trả về hợp đồng liên quan tới user)
+                const contracts = await fetchAPI("/hopdong").catch(e => []); 
+                
+                if(!contracts || contracts.length === 0) {
+                    container.innerHTML = '<div class="empty-hint">Không có hợp đồng nào.</div>';
+                    return;
+                }
+
+                container.innerHTML = "";
+                const tmpl = document.getElementById("contract-tmpl");
+
+                contracts.forEach(hd => {
+                    const node = tmpl.content.cloneNode(true);
+                    node.querySelector('[data-field="title"]').textContent = "Hợp đồng - " + hd.ten_phong;
+                    
+                    // Tenant or owner name depending on who queries
+                    const partnerName = hd.tenant_name || hd.owner_name || "Khách ẩn danh";
+                    node.querySelector('[data-field="tenant"]').textContent = partnerName;
+                    
+                    node.querySelector('[data-field="room"]').textContent = hd.ten_phong + ` (${new Intl.NumberFormat('vi-VN').format(hd.price || 0)}đ)`;
+                    node.querySelector('[data-field="date"]').textContent = new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN");
+                    
+                    const badge = node.querySelector('[data-field="statusBadge"]');
+                    const btnApprove = node.querySelector('.btn-approve');
+                    
+                    if(hd.status === "ACTIVE") {
+                        badge.textContent = "ĐÃ HIỆU LỰC";
+                        badge.className = "badge badge--success";
+                        badge.style.borderColor = "var(--success)";
+                        badge.style.color = "var(--success)";
+                    } else if(hd.status === "EXPIRED") {
+                        badge.textContent = "HẾT HẠN";
+                        badge.className = "badge badge--danger";
+                    } else {
+                        badge.textContent = "CHỜ DUYỆT";
+                        badge.className = "badge badge--accent";
+                        
+                        let needsMyApproval = false;
+                        if (role === "CHU_TRO" && !hd.owner_confirmed) needsMyApproval = true;
+                        if (role === "NGUOI_THUE" && !hd.tenant_confirmed) needsMyApproval = true;
+
+                        if (needsMyApproval) {
+                            btnApprove.style.display = "inline-flex";
+                            btnApprove.textContent = role === "CHU_TRO" ? "Duyệt HĐ" : "Ký Chấp Nhận";
+                            btnApprove.onclick = () => handleApprove(hd.id);
+                        } else {
+                            badge.textContent = "CHỜ ĐỐI TÁC DUYỆT";
+                        }
+                    }
+
+                    node.querySelector('.btn-view').onclick = () => {
+                        window.location.href = `hopdong.html?id=${hd.id}`;
+                    };
+
+                    container.appendChild(node);
+                });
+            } catch (err) {
+                container.innerHTML = `<div class="empty-hint error">Lỗi tải dữ liệu.</div>`;
+            }
+        }
+
+        async function handleApprove(id) {
+            if(!confirm("Xác nhận hợp đồng này? Phòng sẽ được chuyển sang trạng thái ĐÃ THUÊ sau khi cả 2 bên đồng ý.")) return;
+            try {
+                await fetchAPI(`/hopdong/${id}/xac-nhan`, "PATCH");
+                showToast("Đã xác nhận Hợp Đồng!", "success");
+                loadContracts();
+            } catch(e) {
+                showToast("Lỗi: " + e.message, "error");
+            }
+        }
+
+        window.addEventListener("load", loadContracts);
+    </script>
+</body>
+</html>

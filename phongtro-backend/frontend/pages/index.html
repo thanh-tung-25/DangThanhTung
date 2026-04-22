@@ -1,9 +1,19 @@
-<script>
-    const token = localStorage.getItem("token");
-
-    if (token) {
-        window.location.href = "pages/trangchu.html";
-    } else {
-        window.location.href = "pages/dangnhap.html";
-    }
-</script>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Phòng trọ</title>
+    <script>
+        const token = localStorage.getItem("token");
+        if (token) {
+            window.location.replace("trangchu.html");
+        } else {
+            window.location.replace("dangnhap.html");
+        }
+    </script>
+</head>
+<body>
+    <p style="font-family: system-ui; padding: 1rem;">Đang chuyển trang…</p>
+</body>
+</html>

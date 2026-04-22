@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hợp Đồng - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+    <style>
+        .contract-doc {
+            background: #fff;
+            color: #0f1419;
+            padding: 40px;
+            border-radius: var(--radius-sm);
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.8;
+            box-shadow: var(--shadow);
+            font-family: "Times New Roman", serif;
+        }
+        .contract-title {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 24px;
+            text-transform: uppercase;
+        }
+        .contract-party {
+            font-weight: 700;
+            margin-top: 20px;
+            font-size: 1.1rem;
+        }
+        .contract-meta {
+            color: var(--muted);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root">
+        <!-- layout -->
+        
+        <div class="panel" style="max-width: 900px; margin: 0 auto;">
+            <div class="panel__head" style="display:flex; justify-content:space-between; align-items:center;">
+                <h2 class="panel__title" style="margin:0;">Chi tiết Hợp đồng</h2>
+                <button class="btn btn--success" id="btnSign" style="display:none;font-weight:bold;">Đồng ý Ký Kết</button>
+            </div>
+
+            <div id="contract-view">
+                <div class="empty-hint">Đang tải hợp đồng...</div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script type="module">
+        import { fetchAPI, getRole, getUser, showToast } from "../js/utils/config.js";
+
+        // param
+        const urlParams = new URLSearchParams(window.location.search);
+        let contractId = urlParams.get("id"); // URL có thể là /hopdong.html?id=123 (nếu xem chi tiết)
+        const role = getRole();
+        
+        async function loadContract() {
+            const view = document.getElementById("contract-view");
+            if (!contractId) {
+                view.innerHTML = `<div class="empty-hint error">Không tìm thấy mã hợp đồng.</div>`;
+                return;
+            }
+
+            try {
+                // Tải dữ liệu thực tế
+                const hd = await fetchAPI(`/hopdong/${contractId}`);
+
+                view.innerHTML = `
+                    <div class="contract-doc">
+                        <div class="contract-title">
+                            CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM<br>
+                            Độc lập - Tự do - Hạnh phúc<br>
+                            -------------<br>
+                            HỢP ĐỒNG THUÊ PHÒNG TRỌ
+                        </div>
+                        <div class="contract-meta">Mã Hợp Đồng: #HD${hd.id} | Ngày bắt đầu: ${new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN")}</div>
+
+                        <div class="contract-party">BÊN CHO THUÊ (BÊN A):</div>
+                        <p>Họ và tên: <b>${hd.chu_tro_name || "Chưa có"}</b></p>
+
+                        <div class="contract-party">BÊN THUÊ (BÊN B):</div>
+                        <p>Họ và tên: <b>${hd.nguoi_thue_name || "Chưa có"}</b></p>
+                        
+                        <div class="contract-party">NỘI DUNG HỢP ĐỒNG:</div>
+                        <p>Bên A đồng ý cho Bên B thuê phòng <b>${hd.ten_phong}</b>. Giá thuê thoả thuận là <b>${parseInt(hd.gia_thue || 0).toLocaleString()} VNĐ/Tháng</b>.</p>
+                        <p>Thời hạn hợp đồng tính từ ngày: <b>${new Date(hd.start_date || hd.created_at).toLocaleDateString("vi-VN")}</b> đến ngày: <b>${new Date(hd.end_date || hd.created_at).toLocaleDateString("vi-VN")}</b>.</p>
+                        
+                        <div class="contract-party">ĐIỀU KHOẢN VÀ QUY ĐỊNH PHỤ:</div>
+                        <div style="background:#f4f4f5; color:#1a1a1a; border-left:4px solid #3b82f6; padding:12px; margin-top:10px; font-style:italic; white-space:pre-wrap; border-radius: 0 4px 4px 0;">${hd.terms ? hd.terms : "Áp dụng theo quy định chung của nhà trọ."}</div>
+                        
+                        <p style="margin-top:20px;">Tiền phòng phải nộp định kỳ hàng tháng. Hai bên cam kết thực hiện đúng theo các điều khoản bảo mật hệ thống.</p>
+                        
+                        <div style="margin-top: 40px; display:flex; justify-content:space-around; text-align:center;">
+                            <div>
+                                <b>BÊN A (Chủ trọ)</b><br>
+                                <i style="color:${hd.owner_confirmed ? 'green' : 'red'}">
+                                    ${hd.owner_confirmed ? '(Đã duyệt)' : '(Chờ duyệt)'}
+                                </i>
+                            </div>
+                            <div>
+                                <b>BÊN B (Người thuê)</b><br>
+                                <i style="color:${hd.tenant_confirmed ? 'green' : 'red'}">
+                                    ${hd.tenant_confirmed ? '(Đã ký xác nhận)' : '(Chờ ký xác nhận)'}
+                                </i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                const btnSign = document.getElementById("btnSign");
+                let needsMyApproval = false;
+                if (role === "CHU_TRO" && !hd.owner_confirmed) needsMyApproval = true;
+                if (role === "NGUOI_THUE" && !hd.tenant_confirmed) needsMyApproval = true;
+
+                if(needsMyApproval) {
+                    btnSign.style.display = "block";
+                    btnSign.textContent = role === "CHU_TRO" ? "Duyệt HĐ" : "Đồng ý Ký Kết";
+                    btnSign.onclick = async () => {
+                        if(confirm("Bạn có chắc chắn chấp nhận thuê và ký bản hợp đồng này?")) {
+                            await fetchAPI(`/hopdong/${hd.id}/xac-nhan`, "PATCH");
+                            showToast("Bạn đã ký hợp đồng thành công!", "success");
+                            btnSign.style.display = "none";
+                            setTimeout(() => loadContract(), 1000);
+                        }
+                    };
+                } else {
+                    btnSign.style.display = "none";
+                }
+
+            } catch(e) {
+                view.innerHTML = `<div class="empty-hint error">Lỗi tải dữ liệu. Bạn không có quyền truy cập hoặc cấu trúc chưa khởi tạo.</div>`;
+            }
+        }
+
+        window.addEventListener("load", loadContract);
+    </script>
+</body>
+</html>

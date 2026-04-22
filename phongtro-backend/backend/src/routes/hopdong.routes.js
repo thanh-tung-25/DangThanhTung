@@ -1,14 +1,12 @@
-﻿const router = require("express").Router();
+const router = require("express").Router();
 
-const { tao , xacNhan  } = require("../controllers/hopdong.controller");
-const { taoHopDong, xacNhanHopDong } = require("../services/hopdong.service");
-const {
-    authenticate,
-    authorize
-} = require("../middleware/auth.middleware");
+const { tao, xacNhan, layDanhSach, layChiTiet } = require("../controllers/hopdong.controller");
+const { authenticate, authorize } = require("../middleware/auth.middleware");
 
-// NGUOI THUE TAO HOP DONG
-router.post("/", authenticate, authorize("NGUOI_THUE"), tao);
-
+// HOP DONG
+router.post("/", authenticate, tao); // Nới lỏng auth cho phép cả CHU_TRO và NGUOI_THUE
+router.get("/", authenticate, layDanhSach);
+router.get("/:id", authenticate, layChiTiet);
 router.patch("/:id/xac-nhan", authenticate, xacNhan);
+
 module.exports = router;

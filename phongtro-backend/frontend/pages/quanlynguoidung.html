@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quản lý Người Dùng (Admin) - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+    <style>
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .table th, .table td {
+            padding: 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+        .table th {
+            color: var(--muted);
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-root">
+        <div class="panel">
+            <div class="panel__head" style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <h2 class="panel__title">Danh sách Người Dùng</h2>
+                    <p class="panel__desc">Tra cứu, vô hiệu hoá các tài khoản trong hệ thống</p>
+                </div>
+            </div>
+
+            <div style="overflow-x:auto;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên người dùng</th>
+                            <th>Tài khoản</th>
+                            <th>Vai trò</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-tbody">
+                        <tr><td colspan="5" class="empty-hint" style="border:none;">Đang tải danh sách...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <template id="user-row-tmpl">
+            <tr>
+                <td data-field="id">#1</td>
+                <td data-field="fullname" style="font-weight:bold;">Nguyễn Văn A</td>
+                <td data-field="username">nva</td>
+                <td><span class="badge" data-field="role">CHU_TRO</span></td>
+                <td>
+                    <button class="btn btn--danger btn--sm btn-del">Xoá</button>
+                </td>
+            </tr>
+        </template>
+    </div>
+
+    <script type="module">
+        import { fetchAPI, showToast } from "../js/utils/config.js";
+        
+        async function loadUsers() {
+            const tbody = document.getElementById("user-tbody");
+            try {
+                // await fetchAPI("/users");
+                // Mockup
+                const users = [
+                    {id: 1, fullname: "Nguyễn Văn Admin", username: "admin", role: "ADMIN"},
+                    {id: 2, fullname: "Nguyễn Chủ Trọ", username: "chutro", role: "CHU_TRO"},
+                    {id: 3, fullname: "Lê Người Thuê", username: "nguoithue", role: "NGUOI_THUE"}
+                ];
+
+                tbody.innerHTML = "";
+                const tmpl = document.getElementById("user-row-tmpl");
+                users.forEach(u => {
+                    const node = tmpl.content.cloneNode(true);
+                    node.querySelector('[data-field="id"]').textContent = u.id;
+                    node.querySelector('[data-field="fullname"]').textContent = u.fullname;
+                    node.querySelector('[data-field="username"]').textContent = u.username;
+                    const badge = node.querySelector('[data-field="role"]');
+                    badge.textContent = u.role;
+                    if(u.role === "ADMIN") badge.className = "badge badge--danger";
+                    else if (u.role === "CHU_TRO") badge.className = "badge badge--accent";
+
+                    node.querySelector('.btn-del').onclick = () => {
+                        if(confirm("Chắc chắn xoá tài khoản này?")) {
+                            showToast("Đã xoá (Giả lập)!");
+                        }
+                    };
+
+                    tbody.appendChild(node);
+                });
+            } catch(e) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-hint error">Lỗi lấy dữ liệu</td></tr>`;
+            }
+        }
+
+        window.addEventListener("load", loadUsers);
+    </script>
+</body>
+</html>

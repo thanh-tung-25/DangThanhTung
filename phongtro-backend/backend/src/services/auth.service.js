@@ -1,12 +1,15 @@
-﻿
+
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const { generateToken } = require("../utils/jwt");
 
-const registerService = async ({ username, password }) => {
+const registerService = async ({ username, password, role, fullname }) => {
+    // Nếu client gửi role tuỳ chọn hoặc thiếu, ta set mặc định NGUOI_THUE
+    const targetRole = role === "CHU_TRO" || role === "ADMIN" ? role : "NGUOI_THUE";
+
     const [existing] = await db.query(
         "SELECT id FROM users WHERE username = ?",
-        [username]
+        { replacements: [username] }
     );
 
     if (existing.length > 0) {
@@ -15,21 +18,21 @@ const registerService = async ({ username, password }) => {
 
     const hashedPassword = await bcrypt.hash(
         password,
-        parseInt(process.env.BCRYPT_SALT)
+        parseInt(process.env.BCRYPT_SALT || 10)
     );
 
     const [result] = await db.query(
-        "INSERT INTO users (username, password) VALUES (?, ?)",
-        [username, hashedPassword]
+        "INSERT INTO users (username, password, role, fullname) VALUES (?, ?, ?, ?)",
+        { replacements: [username, hashedPassword, targetRole, fullname || null] }
     );
 
-    return { id: result.insertId, username };
+    return { id: result.insertId, username, role: targetRole, fullname };
 };
 
 const loginService = async ({ username, password }) => {
     const [rows] = await db.query(
-        "SELECT * FROM users WHERE username = ?",
-        [username]
+        "SELECT * FROM users WHERE username = ? OR email = ?",
+        { replacements: [username, username] }
     );
 
     if (rows.length === 0) {
@@ -63,7 +66,17 @@ await db.query(
     }
 );
 
-return { accessToken, refreshToken };
+return {
+        accessToken,
+        refreshToken,
+        user: {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+            fullname: user.fullname,
+            email: user.email
+        }
+    };
 };
 
 module.exports = {

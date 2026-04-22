@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chi tiết bài đăng - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <script type="module" src="../js/core/layout.js"></script>
+</head>
+<body>
+    <div id="app-root">
+        <div class="panel" style="max-width: 700px; margin: 0 auto;">
+            <div class="panel__head">
+                <a href="trangchu.html" class="btn btn--ghost btn--sm" style="margin-bottom: 12px;">&larr; Trở về bảng tin</a>
+                <h2 class="panel__title">Thông tin phòng trọ</h2>
+            </div>
+            
+            <div id="post-detail" class="post" style="border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 20px;">
+                <div class="empty-hint">Đang tải thông tin...</div>
+            </div>
+
+            <div id="action-area" style="display:none; text-align: center; margin-top: 24px;">
+                <button class="btn btn--primary" id="btnContactBig" style="padding: 14px 32px; font-size: 1.1rem;">
+                    💬 Nhắn tin cho Chủ Trọ ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { fetchAPI, getUser } from "../js/utils/config.js";
+
+        // Query Param ?id=...
+        const urlParams = new URLSearchParams(window.location.search);
+        const postId = urlParams.get("id");
+        const user = getUser();
+
+        async function loadDetail() {
+            if(!postId) {
+                document.getElementById("post-detail").innerHTML = `<div class="empty-hint error">Không tìm thấy bài đăng.</div>`;
+                return;
+            }
+
+            try {
+                // await fetchAPI(`/baidang/${postId}`);
+                // Mockup
+                const p = {
+                    nguoi_dang: { id: 1, fullname: "Nguyễn Chủ Trọ" },
+                    phong: { ten_phong: "P.VIP", gia_thue: 3500000, mo_ta: "Phòng master, có ban công" },
+                    noi_dung: "Góc tìm người hữu duyên ở chung cư mini...",
+                    createdAt: new Date().toISOString()
+                };
+
+                document.getElementById("post-detail").innerHTML = `
+                    <h3 style="margin-top:0; color:var(--accent-hover);">${p.phong.ten_phong}</h3>
+                    <p style="font-size:1.2rem; font-weight:700; color:var(--success);">Giá thuê: ${p.phong.gia_thue.toLocaleString()} VNĐ</p>
+                    <p style="color:var(--muted);">${p.phong.mo_ta}</p>
+                    <hr style="border: 0; border-top: 1px dashed var(--border); margin: 20px 0;">
+                    <div style="font-size: 1.05rem; line-height:1.6; white-space:pre-wrap;">${p.noi_dung}</div>
+                    <div style="margin-top:16px; color:var(--muted); font-size:0.85rem;">Đăng bởi: ${p.nguoi_dang.fullname}</div>
+                `;
+
+                if (p.nguoi_dang.id !== user.id) {
+                    document.getElementById("action-area").style.display = "block";
+                    document.getElementById("btnContactBig").onclick = () => {
+                        window.location.href = `tinnhan.html?userId=${p.nguoi_dang.id}`;
+                    };
+                }
+            } catch(e) {
+                document.getElementById("post-detail").innerHTML = `<div class="empty-hint error">Lỗi tải bài viết.</div>`;
+            }
+        }
+
+        window.addEventListener("load", loadDetail);
+    </script>
+</body>
+</html>

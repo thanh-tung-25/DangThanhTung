@@ -1,4 +1,4 @@
-﻿const { taoHopDong } = require("../services/hopdong.service");
+const { taoHopDong } = require("../services/hopdong.service");
 
 // THUE PHONG (TAO HOP DONG)
 const tao = async (req, res) => {
@@ -24,7 +24,28 @@ const xacNhan = async (req, res) => {
     }
 };
 
+const layDanhSach = async (req, res) => {
+    try {
+        const { layDanhSachHopDong } = require("../services/hopdong.service");
+        const data = await layDanhSachHopDong(req.user);
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
+const layChiTiet = async (req, res) => {
+    try {
+        const { layChiTietHopDong } = require("../services/hopdong.service");
+        const data = await layChiTietHopDong(req.params.id, req.user);
+        res.json(data);
+    } catch (err) {
+        if(err.message === "NOT_FOUND") return res.status(404).json({message: "Not found"});
+        res.status(500).json({ message: "Server error" });
+    }
+};
+
 module.exports.xacNhan = xacNhan;
 module.exports = {
-    tao , xacNhan 
+    tao, xacNhan, layDanhSach, layChiTiet
 };

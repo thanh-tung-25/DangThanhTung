@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Đăng ký - SmartRoom</title>
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <style>
+        .role-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .role-option {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            padding: 12px;
+            border-radius: var(--radius-sm);
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--muted);
+            font-weight: 600;
+        }
+        .role-option.selected {
+            background: rgba(61, 139, 253, 0.15);
+            border-color: var(--accent);
+            color: var(--accent-hover);
+        }
+        .role-option input {
+            display: none;
+        }
+    </style>
+</head>
+<body class="auth-page">
+
+    <div class="auth-shell">
+        <div class="auth-brand">
+            <h1 class="auth-brand__title">Tham gia SmartRoom</h1>
+            <p class="auth-brand__subtitle">Tạo tài khoản để quản lý/tìm phòng dễ dàng hơn</p>
+        </div>
+
+        <div class="auth-card">
+            
+            <form id="registerForm" class="auth-form">
+                
+                <label class="field__label" style="margin-bottom:-10px">Bạn là ai?</label>
+                <div class="role-selector">
+                    <label class="role-option selected" id="opt-chu">
+                        <input type="radio" name="role" value="CHU_TRO" checked>
+                        Chủ trọ
+                    </label>
+                    <label class="role-option" id="opt-thue">
+                        <input type="radio" name="role" value="NGUOI_THUE">
+                        Người thuê
+                    </label>
+                </div>
+
+                <div class="field">
+                    <label class="field__label">Tên đăng nhập</label>
+                    <input type="text" id="username" placeholder="Ví dụ: nguyenvana" required />
+                </div>
+                
+                <div class="field">
+                    <label class="field__label">Mật khẩu</label>
+                    <input type="password" id="password" placeholder="Tối thiểu 6 ký tự..." required />
+                </div>
+
+                <div class="field">
+                    <label class="field__label">Họ và tên</label>
+                    <input type="text" id="fullname" placeholder="Nhập họ tên thật..." required />
+                </div>
+                
+                <button type="submit" id="btnSubmit" class="btn btn--primary btn--block" style="margin-top:8px">
+                    Tiến hành Đăng ký
+                </button>
+            </form>
+
+            <p class="auth-footnote text-center" style="text-align: center; margin-top: 24px;">
+                Đã có tài khoản? <a href="dangnhap.html" style="color: var(--accent);text-decoration:none;font-weight:600;">Đăng nhập</a>
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { CONFIG, showToast } from "../js/utils/config.js";
+
+        // UI Role switch
+        const opts = document.querySelectorAll('.role-option');
+        opts.forEach(opt => {
+            opt.addEventListener('click', () => {
+                opts.forEach(x => x.classList.remove('selected'));
+                opt.classList.add('selected');
+                opt.querySelector('input').checked = true;
+            });
+        });
+
+        document.getElementById("registerForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById("btnSubmit");
+            btn.textContent = "Đang xử lý...";
+            btn.disabled = true;
+
+            const role = document.querySelector('input[name="role"]:checked').value;
+            const username = document.getElementById("username").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const fullname = document.getElementById("fullname").value.trim();
+
+            try {
+                const res = await fetch(`${CONFIG.API_URL}/auth/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password, fullname, role })
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.message || "Tên đăng nhập có thể đã tồn tại!");
+
+                showToast("Đăng ký thành công! Vui lòng đăng nhập.", "success");
+                
+                setTimeout(() => {
+                    window.location.href = "dangnhap.html";
+                }, 1500);
+
+            } catch (err) {
+                showToast(err.message, "error");
+                btn.textContent = "Tiến hành Đăng ký";
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

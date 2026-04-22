@@ -1,10 +1,11 @@
-﻿
+
 
 
 const {
     taoBaiDang,
     layTatCa,
-    xoaBaiDang
+    xoaBaiDang,
+    suaBaiDang
 } = require("../services/baidang.service");
 
 const tao = async (req, res) => {
@@ -22,8 +23,14 @@ const xoa = async (req, res) => {
     res.json({ message: "Da xoa" });
 };
 
+const sua = async (req, res) => {
+    await suaBaiDang(req.params.id, req.body, req.user);
+    res.json({ message: "Da cap nhat" });
+};
+
 module.exports = {
     tao,
     lay,
-    xoa
+    xoa,
+    sua
 };
