@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Futuristic Room - Thuê Phòng 3D</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="./assets/css/main.css">
+    <link rel="stylesheet" href="./assets/css/components.css">
+</head>
+<body>
+    <!-- Background Effects -->
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Navigation -->
+    <nav class="navbar 3d-panel">
+        <div class="nav-container">
+            <a href="/" class="nav-logo" data-link>
+                <i class="fa-solid fa-cube logo-icon"></i>
+                <span class="logo-text">ROOM<span class="text-cyan">3D</span></span>
+            </a>
+            
+            <div class="nav-links">
+                <a href="/" class="nav-item active" data-link>Trang Chủ</a>
+                <a href="/rooms" class="nav-item" data-link>Phòng Trọ</a>
+            </div>
+
+            <div class="nav-actions" id="nav-auth-section">
+                <!-- Sẽ được thay đổi bằng JS tuỳ theo trạng thái đăng nhập -->
+                <a href="/login" class="btn btn-outline" data-link>Đăng Nhập</a>
+                <a href="/register" class="btn btn-primary" data-link>Đăng Ký</a>
+            </div>
+            
+            <button class="mobile-menu-btn">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app" class="page-transition">
+        <!-- Content from pages will be injected here -->
+    </main>
+
+    <!-- Toast Notifications Container -->
+    <div id="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
+    <script src="./js/api.js" type="module"></script>
+    <script src="./js/auth.js" type="module"></script>
+    <script src="./js/router.js" type="module"></script>
+    <script src="./js/app.js" type="module"></script>
+</body>
+</html>

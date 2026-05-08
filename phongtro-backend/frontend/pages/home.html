@@ -1,0 +1,57 @@
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">Khám Phá Không Gian <br>Sống Tương Lai</h1>
+            <p class="hero-subtitle">Tìm kiếm và cho thuê phòng trọ dễ dàng, nhanh chóng với nền tảng công nghệ 3D hiện đại nhất.</p>
+            <div style="display: flex; gap: 1rem;">
+                <a href="#rooms-section" class="btn btn-primary" style="padding: 1rem 2rem; font-size: 1.2rem;">
+                    <i class="fa-solid fa-magnifying-glass"></i> Tìm Phòng Ngay
+                </a>
+            </div>
+        </div>
+        
+        <div class="hero-graphics">
+            <div class="hero-cube">
+                <div class="cube-face cube-front"><i class="fa-solid fa-house"></i></div>
+                <div class="cube-face cube-back"><i class="fa-solid fa-key"></i></div>
+                <div class="cube-face cube-right"><i class="fa-solid fa-bed"></i></div>
+                <div class="cube-face cube-left"><i class="fa-solid fa-couch"></i></div>
+                <div class="cube-face cube-top"><i class="fa-solid fa-wifi"></i></div>
+                <div class="cube-face cube-bottom"><i class="fa-solid fa-bath"></i></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Filter Section -->
+    <section id="rooms-section" style="margin: 4rem 0 2rem;">
+        <div class="panel-3d" style="padding: 2rem; display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end;">
+            <div style="flex: 1; min-width: 200px;">
+                <label class="form-label">Tìm kiếm</label>
+                <input type="text" id="search-input" class="form-control" placeholder="Nhập tên phòng, khu vực...">
+            </div>
+            <div style="flex: 1; min-width: 200px;">
+                <label class="form-label">Mức giá</label>
+                <select class="form-control">
+                    <option value="">Tất cả mức giá</option>
+                    <option value="1">Dưới 2 triệu</option>
+                    <option value="2">2 - 4 triệu</option>
+                    <option value="3">Trên 4 triệu</option>
+                </select>
+            </div>
+            <button class="btn btn-outline" style="height: 48px;"><i class="fa-solid fa-filter"></i> Lọc</button>
+        </div>
+    </section>
+
+    <!-- Rooms Grid -->
+    <section>
+        <h2 style="font-size: 2rem; margin-bottom: 2rem; border-left: 4px solid var(--clr-cyan); padding-left: 1rem;">Phòng Trọ Nổi Bật</h2>
+        
+        <div id="rooms-grid" class="grid grid-cols-3">
+            <!-- Skeleton Loading -->
+            <div class="card-3d" style="min-height: 300px; display: flex; align-items: center; justify-content: center;">
+                <i class="fa-solid fa-circle-notch fa-spin fa-3x text-cyan"></i>
+            </div>
+        </div>
+    </section>
+</div>
