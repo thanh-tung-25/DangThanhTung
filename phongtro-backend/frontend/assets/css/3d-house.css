@@ -1,0 +1,112 @@
+/* 3d-house.css */
+.graphic-container {
+    position: relative;
+    width: 400px;
+    height: 400px;
+    perspective: 1200px;
+}
+
+.isometric-scene {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(60deg) rotateZ(45deg);
+    animation: hoverHouse 4s ease-in-out infinite alternate;
+}
+
+/* Floor */
+.iso-floor {
+    position: absolute;
+    width: 250px;
+    height: 250px;
+    bottom: 50px; left: 50px;
+    background: rgba(255, 255, 255, 0.4);
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 40px rgba(14, 165, 233, 0.3);
+    transform: translateZ(0);
+}
+
+/* Walls */
+.iso-wall-left {
+    position: absolute;
+    width: 150px;
+    height: 120px;
+    bottom: 100px; left: 100px;
+    background: #ffffff;
+    border: 2px solid #e0f2fe;
+    transform-origin: bottom;
+    transform: rotateX(-90deg) translateZ(0);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.iso-wall-right {
+    position: absolute;
+    width: 150px;
+    height: 120px;
+    bottom: 100px; left: 100px;
+    background: #f8fafc;
+    border: 2px solid #e0f2fe;
+    transform-origin: left;
+    transform: rotateY(90deg) translateZ(0) translateX(-150px);
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+}
+
+/* Windows & Doors */
+.iso-door {
+    width: 40px;
+    height: 70px;
+    background: #0ea5e9;
+    align-self: flex-end;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.5rem;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+}
+
+.iso-window {
+    width: 40px;
+    height: 40px;
+    background: #bae6fd;
+    border: 4px solid #0284c7;
+    animation: glowWindow 3s infinite alternate;
+}
+
+/* Roof */
+.iso-roof {
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    bottom: 100px; left: 100px;
+    background: #38bdf8;
+    border: 2px solid #0ea5e9;
+    transform: translateZ(120px);
+    box-shadow: inset 0 0 20px rgba(255,255,255,0.5);
+}
+
+/* Depth Shadow */
+.iso-shadow {
+    position: absolute;
+    width: 150px;
+    height: 150px;
+    bottom: 80px; left: 80px;
+    background: rgba(0, 0, 0, 0.1);
+    transform: translateZ(-10px);
+    filter: blur(10px);
+}
+
+@keyframes hoverHouse {
+    0% { transform: rotateX(60deg) rotateZ(45deg) translateZ(0px); filter: drop-shadow(20px 20px 20px rgba(14, 165, 233, 0.1)); }
+    100% { transform: rotateX(60deg) rotateZ(45deg) translateZ(30px); filter: drop-shadow(40px 40px 30px rgba(14, 165, 233, 0.2)); }
+}
+
+@keyframes glowWindow {
+    0% { background: #bae6fd; }
+    100% { background: #ffffff; box-shadow: 0 0 15px rgba(255,255,255,1); }
+}

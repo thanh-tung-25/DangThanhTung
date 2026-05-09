@@ -3,64 +3,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Futuristic Room - Thuê Phòng 3D</title>
-    
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;700;900&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
+    <title>Hệ thống Quản lý Phòng trọ</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Custom CSS -->
+    <!-- CSS -->
     <link rel="stylesheet" href="./assets/css/main.css">
-    <link rel="stylesheet" href="./assets/css/components.css">
 </head>
 <body>
-    <!-- Background Effects -->
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-grid"></div>
-
-    <!-- Navigation -->
-    <nav class="navbar 3d-panel">
+    <!-- Navbar sẽ được load động hoặc ẩn hiện dựa vào router -->
+    <nav id="main-nav" style="display: none;">
         <div class="nav-container">
-            <a href="/" class="nav-logo" data-link>
-                <i class="fa-solid fa-cube logo-icon"></i>
-                <span class="logo-text">ROOM<span class="text-cyan">3D</span></span>
+            <a href="/" data-link class="nav-logo">
+                <i class="fa-solid fa-building-user"></i> RoomManager
             </a>
-            
-            <div class="nav-links">
-                <a href="/" class="nav-item active" data-link>Trang Chủ</a>
-                <a href="/rooms" class="nav-item" data-link>Phòng Trọ</a>
+            <div class="nav-links" id="nav-links">
+                <!-- Dynamic links based on role -->
             </div>
-
-            <div class="nav-actions" id="nav-auth-section">
-                <!-- Sẽ được thay đổi bằng JS tuỳ theo trạng thái đăng nhập -->
-                <a href="/login" class="btn btn-outline" data-link>Đăng Nhập</a>
-                <a href="/register" class="btn btn-primary" data-link>Đăng Ký</a>
+            <div class="nav-user">
+                <span id="nav-username"></span>
+                <button id="btn-logout" class="btn btn-outline-danger btn-sm">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                </button>
             </div>
-            
-            <button class="mobile-menu-btn">
-                <i class="fa-solid fa-bars"></i>
-            </button>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
-    <main id="app" class="page-transition">
-        <!-- Content from pages will be injected here -->
+    <!-- Content Area -->
+    <main id="app">
+        <div class="loader">
+            <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải...
+        </div>
     </main>
 
-    <!-- Toast Notifications Container -->
+    <!-- Toast Notification Container -->
     <div id="toast-container"></div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.socket.io/4.8.3/socket.io.min.js"></script>
-    <script src="./js/api.js" type="module"></script>
-    <script src="./js/auth.js" type="module"></script>
-    <script src="./js/router.js" type="module"></script>
-    <script src="./js/app.js" type="module"></script>
+    <script type="module">
+        import { auth } from './js/auth.js';
+
+        // Khởi tạo app
+        document.addEventListener('DOMContentLoaded', async () => {
+            await auth.init();
+            
+            const basePathMatch = window.location.pathname.match(/^(\/.*?\/frontend)/i);
+            const basePath = basePathMatch ? basePathMatch[1] : '';
+
+            if (!auth.isAuthenticated()) {
+                window.location.href = basePath + '/pages/dangnhap.html';
+                return;
+            }
+
+            const role = auth.getRole();
+            if (role === 'LANDLORD') {
+                window.location.href = basePath + '/pages/landlord/trangchu.html';
+            } else if (role === 'TENANT') {
+                window.location.href = basePath + '/pages/tenant/feed.html';
+            } else if (role === 'ADMIN') {
+                window.location.href = basePath + '/pages/admin/quanlyuser.html';
+            } else {
+                window.location.href = basePath + '/pages/dangnhap.html';
+            }
+        });
+    </script>
 </body>
 </html>

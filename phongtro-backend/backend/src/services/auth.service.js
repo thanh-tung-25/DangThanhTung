@@ -1,9 +1,9 @@
-﻿
+
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
 const { generateToken } = require("../utils/jwt");
 
-const registerService = async ({ username, password }) => {
+const registerService = async ({ username, password, role }) => {
     const [existing] = await db.query(
         "SELECT id FROM users WHERE username = ?",
         [username]
@@ -18,12 +18,14 @@ const registerService = async ({ username, password }) => {
         parseInt(process.env.BCRYPT_SALT)
     );
 
+    const userRole = role === 'LANDLORD' ? 'LANDLORD' : 'TENANT';
+
     const [result] = await db.query(
-        "INSERT INTO users (username, password) VALUES (?, ?)",
-        [username, hashedPassword]
+        "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+        [username, hashedPassword, userRole]
     );
 
-    return { id: result.insertId, username };
+    return { id: result.insertId, username, role: userRole };
 };
 
 const loginService = async ({ username, password }) => {

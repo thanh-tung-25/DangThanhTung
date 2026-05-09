@@ -1,64 +1,104 @@
 const API_URL = 'http://localhost:3000/api';
 
+export function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    
+    let icon = 'fa-check-circle';
+    if (type === 'error') icon = 'fa-circle-exclamation';
+    if (type === 'warning') icon = 'fa-triangle-exclamation';
+
+    toast.innerHTML = `<i class="fa-solid ${icon}"></i> <span>${message}</span>`;
+    
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 export const api = {
-    async request(endpoint, method = 'GET', data = null) {
+    async request(endpoint, options = {}) {
         const url = `${API_URL}${endpoint}`;
-        const token = localStorage.getItem('token');
         
         const headers = {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            ...options.headers
         };
 
+        const token = localStorage.getItem('accessToken');
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
 
         const config = {
-            method,
+            ...options,
             headers
         };
 
-        if (data && (method === 'POST' || method === 'PUT' || method === 'PATCH')) {
-            config.body = JSON.stringify(data);
+        if (options.body && typeof options.body === 'object') {
+            config.body = JSON.stringify(options.body);
         }
 
         try {
-            const response = await fetch(url, config);
-            const result = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(result.message || 'Có lỗi xảy ra từ máy chủ');
+            let response = await fetch(url, config);
+
+            // Handle 401 Unauthorized (Token expired)
+            if (response.status === 401 && endpoint !== '/auth/login' && endpoint !== '/auth/refresh') {
+                const refreshed = await this.refreshToken();
+                if (refreshed) {
+                    // Retry original request
+                    headers['Authorization'] = `Bearer ${localStorage.getItem('accessToken')}`;
+                    response = await fetch(url, { ...config, headers });
+                } else {
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    window.location.href = '/login';
+                    throw new Error('Session expired');
+                }
             }
-            
-            return result;
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Có lỗi xảy ra từ máy chủ');
+            }
+
+            return data;
         } catch (error) {
             console.error('API Error:', error);
             throw error;
         }
     },
 
-    get(endpoint) { return this.request(endpoint, 'GET'); },
-    post(endpoint, data) { return this.request(endpoint, 'POST', data); },
-    put(endpoint, data) { return this.request(endpoint, 'PUT', data); },
-    delete(endpoint) { return this.request(endpoint, 'DELETE'); }
-};
+    async refreshToken() {
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) return false;
 
-export function showToast(message, type = 'success') {
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    
-    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
-    
-    toast.innerHTML = `
-        <i class="fa-solid ${icon}"></i>
-        <span>${message}</span>
-    `;
-    
-    container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideInRight 0.3s reverse forwards';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+        try {
+            const response = await fetch(`${API_URL}/auth/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken })
+            });
+
+            if (!response.ok) throw new Error('Refresh failed');
+
+            const data = await response.json();
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            return true;
+        } catch (error) {
+            return false;
+        }
+    },
+
+    get(endpoint) { return this.request(endpoint, { method: 'GET' }); },
+    post(endpoint, body) { return this.request(endpoint, { method: 'POST', body }); },
+    put(endpoint, body) { return this.request(endpoint, { method: 'PUT', body }); },
+    delete(endpoint) { return this.request(endpoint, { method: 'DELETE' }); }
+};

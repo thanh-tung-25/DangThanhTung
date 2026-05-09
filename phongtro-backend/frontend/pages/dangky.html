@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Ký - Hệ thống Quản lý Phòng trọ</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- CSS Liên kết -->
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/auth.css">
+    <link rel="stylesheet" href="../assets/css/3d-house.css">
+</head>
+<body>
+    <nav id="main-nav" style="display: none;"></nav>
+    <div id="toast-container"></div>
+
+    <div class="split-screen">
+        <!-- Left: Form -->
+        <div class="split-left">
+            <div class="auth-card">
+                <h2 class="auth-title text-primary">Đăng Ký</h2>
+                <p class="auth-subtitle">Tạo tài khoản để tham gia hệ thống quản lý.</p>
+                
+                <form id="register-form">
+                    
+                    <!-- Role Selector -->
+                    <div class="role-selector">
+                        <label class="role-option">
+                            <input type="radio" name="role" value="TENANT" checked>
+                            <div class="role-card">
+                                <i class="fa-solid fa-user-astronaut"></i>
+                                <span>Người Thuê</span>
+                            </div>
+                        </label>
+                        <label class="role-option">
+                            <input type="radio" name="role" value="LANDLORD">
+                            <div class="role-card">
+                                <i class="fa-solid fa-user-tie"></i>
+                                <span>Chủ Trọ</span>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="text" id="reg-username" class="form-control" placeholder="Tên đăng nhập" required minlength="3">
+                        <i class="fa-solid fa-user form-icon"></i>
+                    </div>
+                    
+                    <div class="form-group">
+                        <input type="password" id="reg-password" class="form-control" placeholder="Mật khẩu" required minlength="6">
+                        <i class="fa-solid fa-lock form-icon"></i>
+                    </div>
+
+                    <div class="form-group">
+                        <input type="password" id="reg-confirm" class="form-control" placeholder="Xác nhận mật khẩu" required>
+                        <i class="fa-solid fa-check-double form-icon"></i>
+                    </div>
+                    
+                    <button type="submit" id="btn-register" class="btn btn-primary btn-submit">
+                        Khởi Tạo <i class="fa-solid fa-user-plus"></i>
+                    </button>
+                </form>
+                
+                <div class="auth-switch">
+                    <span>Đã có tài khoản?</span>
+                    <a href="dangnhap.html">Đăng nhập</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right: Graphics -->
+        <div class="split-right">
+            <div class="graphic-container">
+                <div class="isometric-scene">
+                    <div class="iso-shadow"></div>
+                    <div class="iso-floor"></div>
+                    <div class="iso-wall-left">
+                        <div class="iso-door" title="Register"><i class="fa-solid fa-house-user"></i></div>
+                    </div>
+                    <div class="iso-wall-right">
+                        <div class="iso-window"></div>
+                        <div class="iso-window"></div>
+                    </div>
+                    <div class="iso-roof"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Logic -->
+    <script type="module" src="dangky.js"></script>
+</body>
+</html>
