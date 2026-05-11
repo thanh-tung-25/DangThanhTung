@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Hợp Đồng - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/hop_dong.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="color: #1e293b;"><i class="fa-solid fa-file-contract text-blue-500"></i> Quản Lý Hợp Đồng</h2>
+                </div>
+
+                <!-- Table Hợp đồng (Bước 16) -->
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã HĐ</th>
+                                <th>Phòng</th>
+                                <th>Người thuê</th>
+                                <th>Ngày bắt đầu</th>
+                                <th>Ngày kết thúc</th>
+                                <th>Trạng thái</th>
+                                <th style="text-align: right;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contract-list">
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding: 3rem; color: #94a3b8;">
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải danh sách hợp đồng...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { hopDongService } from '../../dich_vu/hop_dong.service.js';
+
+        await app.init('Quản Lý Hợp Đồng', 'LANDLORD');
+
+        async function loadContracts() {
+            const list = document.getElementById('contract-list');
+            try {
+                const res = await hopDongService.layDanhSach();
+                const contracts = Array.isArray(res) ? res : (res.data || []);
+                
+                if (contracts.length === 0) {
+                    list.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 2rem; color: #94a3b8;">Chưa có hợp đồng nào.</td></tr>`;
+                    return;
+                }
+
+                list.innerHTML = contracts.map(c => {
+                    // Logic tính trạng thái hiển thị
+                    let statusClass = 'PENDING';
+                    let statusText = 'Chờ xác nhận';
+                    
+                    if (c.status === 'ACTIVE') {
+                        statusClass = 'ACTIVE';
+                        statusText = 'Đang hiệu lực';
+                    } else if (c.status === 'CANCELLED') {
+                        statusClass = 'CANCELLED';
+                        statusText = 'Đã hủy';
+                    } else if (c.status === 'PENDING') {
+                        if (c.owner_confirmed && !c.tenant_confirmed) statusText = 'Chờ khách xác nhận';
+                        if (!c.owner_confirmed && c.tenant_confirmed) statusText = 'Cần bạn xác nhận';
+                    }
+
+                    // Nút hành động
+                    let actionHtml = '';
+                    if (c.status === 'PENDING' && !c.owner_confirmed) {
+                        actionHtml = `
+                            <button class="btn-post btn-sm" onclick="confirmContract(${c.id})">
+                                <i class="fa-solid fa-check"></i> Xác nhận
+                            </button>
+                        `;
+                    } else if (statusClass === 'ACTIVE') {
+                        actionHtml = `<span style="color:#16a34a; font-size:0.85rem;"><i class="fa-solid fa-check-circle"></i> Hoàn tất</span>`;
+                    } else {
+                        actionHtml = `<span style="color:#94a3b8; font-size:0.85rem;">Đang chờ xử lý...</span>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>#HD${c.id}</strong></td>
+                            <td>Phòng ${c.room_id || '?'}</td>
+                            <td>${c.tenant_id ? `Khách (ID: ${c.tenant_id})` : 'Chưa rõ'}</td>
+                            <td>${new Date(c.start_date).toLocaleDateString('vi-VN')}</td>
+                            <td>${new Date(c.end_date).toLocaleDateString('vi-VN')}</td>
+                            <td>
+                                <span class="status-badge status-${statusClass}">
+                                    ${statusClass === 'ACTIVE' ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-clock"></i>'} 
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="table-actions" style="justify-content: flex-end;">
+                                    ${actionHtml}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                list.innerHTML = '<tr><td colspan="7" style="color:red; text-align:center;">Lỗi tải dữ liệu.</td></tr>';
+            }
+        }
+
+        // Bước 18: Xác nhận hợp đồng (Flow: Confirm -> BE tự update room status & send notif)
+        window.confirmContract = async function(id) {
+            if (!confirm('Bạn xác nhận đồng ý ký hợp đồng này?')) return;
+            try {
+                // Hiển thị loading (tùy chọn)
+                await hopDongService.xacNhan(id);
+                alert('Đã xác nhận hợp đồng thành công! Nếu người thuê cũng đã xác nhận, trạng thái phòng sẽ tự động chuyển sang Đã Thuê.');
+                
+                // Tùy chọn: Nhắc nhở thêm người dùng vào nhóm trọ (Bước 18 - Add tenant to group)
+                if (confirm('Bạn có muốn tự động thêm người thuê này vào nhóm trọ của bạn không?')) {
+                    window.location.href = '../../trang/chu_tro/nhom.html';
+                } else {
+                    loadContracts();
+                }
+            } catch (error) {
+                alert('Xác nhận thất bại: ' + error.message);
+            }
+        };
+
+        loadContracts();
+    </script>
+</body>
+</html>

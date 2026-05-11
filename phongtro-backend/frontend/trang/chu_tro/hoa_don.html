@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Hóa Đơn - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/hoa_don.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="color: #1e293b;"><i class="fa-solid fa-file-invoice-dollar text-blue-500"></i> Quản Lý Hóa Đơn</h2>
+                    <button class="btn-post" onclick="openCreateInvoiceModal()">
+                        <i class="fa-solid fa-plus"></i> Tạo hóa đơn mới
+                    </button>
+                </div>
+                
+                <div id="invoice-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(400px, 1fr)); gap: 1.5rem;">
+                    <div style="grid-column: 1/-1; text-align:center; padding: 4rem; color: #94a3b8;">
+                        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                        <p style="margin-top: 1rem;">Đang tải danh sách hóa đơn...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tạo Hóa Đơn -->
+    <div class="modal-overlay" id="invoice-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-file-invoice"></i> Tạo hóa đơn mới</h3>
+                <button class="btn-close" onclick="closeCreateInvoiceModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-create-invoice">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display:block; font-size:0.85rem; font-weight:600; color:#64748b; margin-bottom:0.5rem;">Mã hợp đồng (ID)</label>
+                        <input type="number" id="inv-contract-id" class="chat-input" style="border-radius:8px; padding:0.75rem;" placeholder="Nhập ID hợp đồng đang thuê" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display:block; font-size:0.85rem; font-weight:600; color:#64748b; margin-bottom:0.5rem;">Số tiền (VNĐ)</label>
+                        <input type="number" id="inv-amount" class="chat-input" style="border-radius:8px; padding:0.75rem;" placeholder="VD: 3500000" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeCreateInvoiceModal()">Hủy</button>
+                <button class="btn-post" id="btn-save-invoice" onclick="document.getElementById('form-create-invoice').dispatchEvent(new Event('submit'))">
+                    Tạo và gửi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { thanhToanService } from '../../dich_vu/thanh_toan.service.js';
+
+        await app.init('Quản Lý Hóa Đơn', 'LANDLORD');
+
+        async function loadInvoices() {
+            const list = document.getElementById('invoice-list');
+            try {
+                // Tùy theo logic API backend, lấy toàn bộ hóa đơn thuộc quyền chủ trọ
+                const res = await thanhToanService.layDanhSach();
+                const invoices = Array.isArray(res) ? res : (res.data || []);
+                
+                if (invoices.length === 0) {
+                    list.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align:center; padding: 4rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                            <i class="fa-solid fa-file-invoice fa-3x"></i>
+                            <p style="margin-top: 1rem; font-size: 1.1rem;">Bạn chưa tạo hóa đơn nào.</p>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = invoices.map(inv => {
+                    const isPaid = inv.status === 'PAID';
+                    const amountStr = Number(inv.amount || 0).toLocaleString('vi-VN');
+
+                    return `
+                        <div class="invoice-card" style="margin-bottom:0;">
+                            <div class="invoice-header">
+                                <div class="invoice-title">
+                                    <h3>Hóa Đơn (HĐ: #${inv.contract_id})</h3>
+                                    <span>Ngày tạo: ${new Date(inv.created_at).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                                <div class="invoice-amount">${amountStr} đ</div>
+                            </div>
+                            <div class="invoice-body">
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Trạng thái</span>
+                                    <span class="invoice-value badge-${isPaid ? 'PAID' : 'UNPAID'}">
+                                        ${isPaid ? '<i class="fa-solid fa-check"></i> Đã thu tiền' : '<i class="fa-solid fa-circle-exclamation"></i> Chờ thanh toán'}
+                                    </span>
+                                </div>
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Mã giao dịch</span>
+                                    <span class="invoice-value">TXN-${inv.id.toString().padStart(6, '0')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                list.innerHTML = '<div style="grid-column:1/-1; color:red; text-align:center;">Lỗi tải dữ liệu hóa đơn.</div>';
+            }
+        }
+
+        // Logic tạo hóa đơn mới
+        window.openCreateInvoiceModal = function() {
+            document.getElementById('form-create-invoice').reset();
+            document.getElementById('invoice-modal').classList.add('active');
+        };
+
+        window.closeCreateInvoiceModal = function() {
+            document.getElementById('invoice-modal').classList.remove('active');
+        };
+
+        document.getElementById('form-create-invoice').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-save-invoice');
+            
+            const contractId = document.getElementById('inv-contract-id').value;
+            const amount = document.getElementById('inv-amount').value;
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang tạo...';
+                await thanhToanService.taoHoaDon(contractId, amount);
+                alert('Tạo hóa đơn thành công! Người thuê sẽ nhận được thông báo.');
+                closeCreateInvoiceModal();
+                loadInvoices();
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Tạo và gửi';
+            }
+        });
+
+        loadInvoices();
+    </script>
+</body>
+</html>

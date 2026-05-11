@@ -1,0 +1,27 @@
+/* CSS cho Trang Hồ Sơ (Bước 23 & 24) */
+.profile-layout { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; align-items: start; }
+@media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
+
+/* Profile Card */
+.profile-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2.5rem 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); text-align: center; }
+.profile-avatar-wrap { position: relative; width: 120px; height: 120px; margin: 0 auto 1.5rem; }
+.profile-avatar { width: 100%; height: 100%; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; font-size: 3.5rem; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+.btn-upload-avatar { position: absolute; bottom: 5px; right: 5px; width: 36px; height: 36px; background: #1e293b; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid #fff; transition: 0.2s; }
+.btn-upload-avatar:hover { background: #334155; transform: scale(1.1); }
+.profile-name { font-size: 1.5rem; font-weight: 700; color: #1e293b; margin-bottom: 0.5rem; }
+.profile-role { color: #0ea5e9; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; background: #e0f2fe; padding: 0.35rem 1rem; border-radius: 20px; display: inline-block; margin-bottom: 2rem; letter-spacing: 0.5px; }
+
+/* Settings Form */
+.settings-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 2rem; }
+.settings-header { font-size: 1.25rem; font-weight: 600; color: #1e293b; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; padding-bottom: 1rem; border-bottom: 1px solid #f1f5f9; }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+@media (max-width: 600px) { .form-grid { grid-template-columns: 1fr; } }
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; }
+.form-input { width: 100%; padding: 0.75rem 1rem; border: 1px solid #e2e8f0; border-radius: 8px; outline: none; font-size: 0.95rem; color: #1e293b; transition: 0.2s; background: #fff; }
+.form-input:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px #e0f2fe; }
+.form-input:disabled { background: #f8fafc; color: #94a3b8; cursor: not-allowed; border-color: #e2e8f0; }
+
+.btn-save { background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; border: none; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
+.btn-save:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3); }

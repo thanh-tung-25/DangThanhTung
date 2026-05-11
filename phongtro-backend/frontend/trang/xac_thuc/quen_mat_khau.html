@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quên Mật Khẩu - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/dang_nhap.css">
+</head>
+<body>
+    <div class="auth-layout">
+        <!-- Cột trái: Giới thiệu -->
+        <div class="auth-left">
+            <h1>Đừng lo lắng,<br>chúng tôi sẽ<br>giúp bạn.</h1>
+            <p>Nhập email hoặc tên đăng nhập để nhận liên kết đặt lại mật khẩu an toàn.</p>
+            <div style="position: absolute; bottom: -50px; right: -50px; opacity: 0.1;">
+                <i class="fa-solid fa-life-ring" style="font-size: 30rem;"></i>
+            </div>
+        </div>
+
+        <!-- Cột phải: Form Quên mật khẩu -->
+        <div class="auth-right">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <h2>Quên mật khẩu?</h2>
+                    <p>Khôi phục quyền truy cập tài khoản</p>
+                </div>
+
+                <form id="form-forgot">
+                    <div class="form-group">
+                        <label>Tên đăng nhập hoặc Email</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-envelope"></i>
+                            <input type="text" class="auth-input" id="identifier" placeholder="Nhập tên đăng nhập hoặc email..." required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-auth" id="btn-submit">
+                        Gửi yêu cầu khôi phục
+                    </button>
+                </form>
+
+                <div class="auth-footer" style="margin-top: 1.5rem;">
+                    Nhớ ra mật khẩu? <a href="dang_nhap.html">Quay lại đăng nhập</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container cho Toast Error -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <script type="module">
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+
+        // Ngăn người dùng đã đăng nhập vào lại trang này
+        auth.checkGuest();
+
+        function showAuthToast(msg, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const color = type === 'info' ? '#0ea5e9' : '#ef4444';
+            const icon = type === 'info' ? 'fa-info-circle' : 'fa-circle-exclamation';
+            toast.style.cssText = `background: #fff; border-left: 4px solid ${color}; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 1rem; transform: translateX(120%); transition: all 0.3s; min-width: 250px;`;
+            toast.innerHTML = `<i class="fa-solid ${icon}" style="color: ${color};"></i> <div style="flex:1; color:#1e293b; font-size:0.9rem;">${msg}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+            setTimeout(() => {
+                toast.style.transform = 'translateX(120%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        document.getElementById('form-forgot').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            const identifier = document.getElementById('identifier').value.trim();
+
+            if (!identifier) return;
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+                
+                // Vì Backend chưa có API Forgot Password, mock success
+                // await api.post('/auth/forgot-password', { identifier });
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                showAuthToast('Yêu cầu đã được gửi! Vui lòng kiểm tra email của bạn.', 'info');
+                document.getElementById('form-forgot').reset();
+            } catch (error) {
+                showAuthToast(error.message || 'Có lỗi xảy ra', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Gửi yêu cầu khôi phục';
+            }
+        });
+    </script>
+</body>
+</html>

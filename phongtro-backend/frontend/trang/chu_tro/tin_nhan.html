@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tin Nhắn - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/tin_nhan.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="chat-layout">
+                <!-- Danh sách hội thoại -->
+                <div class="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        Cuộc trò chuyện
+                    </div>
+                    <div class="conv-list" id="conv-list">
+                        <div style="text-align:center; padding: 2rem; color: #94a3b8;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vùng Chat -->
+                <div class="chat-main">
+                    <div class="chat-header" id="chat-header" style="display: none;">
+                        <div class="conv-avatar" id="chat-partner-avatar">U</div>
+                        <div class="conv-info">
+                            <div class="conv-name" id="chat-partner-name">User</div>
+                            <div class="conv-last" id="chat-partner-status">Đang hoạt động</div>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="empty-chat">
+                            <i class="fa-regular fa-comments fa-3x"></i>
+                            <p>Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-footer" id="chat-footer" style="display: none;">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="msg-input" placeholder="Nhập tin nhắn..." autocomplete="off">
+                        </div>
+                        <button class="btn-send" id="btn-send">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+        import { socketService } from '../../tai_nguyen/js/socket.js';
+        import { tinNhanService } from '../../dich_vu/tin_nhan.service.js';
+
+        // 1. Khởi tạo app (Ở đây dùng cho LANDLORD, nhưng logic nhắn tin xài chung được)
+        await app.init('Tin Nhắn', 'LANDLORD');
+
+        let currentConvId = null;
+        let typingTimeout = null;
+
+        // 2. Khởi tạo Socket
+        socketService.connect();
+
+        // Lắng nghe tin nhắn tới
+        socketService.onReceiveMessage((msg) => {
+            if (msg.conversation_id === currentConvId) {
+                appendMessage(msg);
+                // (Tùy chọn) Gửi sự kiện đã xem tin nhắn nếu BE hỗ trợ
+            }
+            loadConversations(); // Cập nhật lại list bên trái để hiện tin nhắn mới nhất
+        });
+
+        // Lắng nghe sự kiện ai đó đang gõ
+        socketService.onTyping((data) => {
+            if (currentConvId /* && data.senderId === partnerId */) {
+                showTypingIndicator();
+            }
+        });
+
+        // 3. Xử lý UI
+        async function loadConversations() {
+            const list = document.getElementById('conv-list');
+            try {
+                const res = await tinNhanService.layDanhSachHoiThoai();
+                const convs = Array.isArray(res) ? res : (res.data || []);
+                
+                if (convs.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; padding:2rem; color:#94a3b8;">Chưa có cuộc trò chuyện nào.</div>';
+                    return;
+                }
+
+                list.innerHTML = convs.map(c => {
+                    const partner = c.other_user || {};
+                    const init = (partner.username || '?')[0].toUpperCase();
+                    return `
+                        <div class="conv-item ${c.id === currentConvId ? 'active' : ''}" onclick="openConversation(${c.id}, ${partner.id}, '${partner.username}')">
+                            <div class="conv-avatar">
+                                ${init}
+                                <div class="online-dot"></div>
+                            </div>
+                            <div class="conv-info">
+                                <div class="conv-name">${partner.username || 'Khách'}</div>
+                                <div class="conv-last">${c.last_message || 'Bắt đầu trò chuyện...'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                list.innerHTML = '<div style="color:red; text-align:center;">Lỗi tải dữ liệu.</div>';
+            }
+        }
+
+        window.openConversation = async function(convId, partnerId, partnerName) {
+            currentConvId = convId;
+            
+            // Cập nhật Header
+            document.getElementById('chat-header').style.display = 'flex';
+            document.getElementById('chat-footer').style.display = 'flex';
+            document.getElementById('chat-partner-name').textContent = partnerName;
+            document.getElementById('chat-partner-avatar').textContent = partnerName[0].toUpperCase();
+
+            // Đổi active class
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const msgBox = document.getElementById('chat-messages');
+            msgBox.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+
+            try {
+                const res = await tinNhanService.layTinNhan(convId);
+                const msgs = Array.isArray(res) ? res : (res.data || []);
+                
+                msgBox.innerHTML = '';
+                if (msgs.length === 0) {
+                    msgBox.innerHTML = '<div class="empty-chat"><p>Hãy gửi lời chào đầu tiên!</p></div>';
+                } else {
+                    msgs.forEach(m => appendMessage(m, false));
+                    msgBox.scrollTop = msgBox.scrollHeight;
+                }
+            } catch (error) {
+                msgBox.innerHTML = '<div style="color:red; text-align:center;">Lỗi tải tin nhắn.</div>';
+            }
+        };
+
+        function appendMessage(msg, scroll = true) {
+            const msgBox = document.getElementById('chat-messages');
+            
+            // Xóa empty state hoặc typing indicator nếu có
+            const empty = msgBox.querySelector('.empty-chat');
+            if (empty) empty.remove();
+            removeTypingIndicator();
+
+            const isMine = msg.sender_id === auth.user.id;
+            const div = document.createElement('div');
+            div.className = `msg-wrapper ${isMine ? 'mine' : 'other'}`;
+            
+            const time = new Date(msg.created_at || Date.now()).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+            
+            div.innerHTML = `
+                <div class="msg-bubble ${isMine ? 'msg-mine' : 'msg-other'}">${escapeHtml(msg.content)}</div>
+                <div class="msg-meta">
+                    ${time}
+                    ${isMine ? '<i class="fa-solid fa-check-double msg-seen"></i>' : ''}
+                </div>
+            `;
+            
+            msgBox.appendChild(div);
+            if (scroll) msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        // Xử lý Typing
+        document.getElementById('msg-input').addEventListener('input', () => {
+            // Phát sự kiện typing qua socket
+            socketService.emitTyping(currentConvId /* hoặc partnerId */);
+            
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                // emit stop typing (nếu cần)
+            }, 1000);
+        });
+
+        // Hiển thị ai đó đang gõ
+        function showTypingIndicator() {
+            const msgBox = document.getElementById('chat-messages');
+            if (document.getElementById('typing-indicator')) return;
+
+            const div = document.createElement('div');
+            div.id = 'typing-indicator';
+            div.className = 'typing-indicator';
+            div.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+            msgBox.appendChild(div);
+            msgBox.scrollTop = msgBox.scrollHeight;
+
+            // Tự tắt sau 2s nếu không có tín hiệu gõ tiếp
+            setTimeout(removeTypingIndicator, 2000);
+        }
+
+        function removeTypingIndicator() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.remove();
+        }
+
+        // Gửi tin nhắn
+        async function sendMessage() {
+            if (!currentConvId) return;
+            const input = document.getElementById('msg-input');
+            const content = input.value.trim();
+            if (!content) return;
+
+            // Xóa ô nhập ngay lập tức
+            input.value = '';
+            
+            // Hiển thị tin nhắn của mình ngay lập tức (Optimistic UI)
+            const tempMsg = { sender_id: auth.user.id, content: content, created_at: new Date() };
+            appendMessage(tempMsg);
+
+            try {
+                await tinNhanService.guiTinNhan(currentConvId, content);
+                loadConversations(); // Cập nhật lại sidebar
+            } catch (error) {
+                alert('Lỗi gửi tin nhắn');
+            }
+        }
+
+        document.getElementById('btn-send').addEventListener('click', sendMessage);
+        document.getElementById('msg-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Tự động mở chat nếu có query param ?conv_id=...
+        const urlParams = new URLSearchParams(window.location.search);
+        const convIdParam = urlParams.get('conv_id');
+        
+        loadConversations().then(() => {
+            if (convIdParam) {
+                // Tìm partnerName từ DOM (hơi thủ công, thực tế lấy từ API)
+                const targetConv = document.querySelector(`.conv-item[onclick*="openConversation(${convIdParam}"]`);
+                if (targetConv) {
+                    targetConv.click();
+                } else {
+                    // Mở mặc định conversation id (cần gọi api chi tiết)
+                    openConversation(convIdParam, null, 'Chat mới');
+                }
+            }
+        });
+    </script>
+</body>
+</html>

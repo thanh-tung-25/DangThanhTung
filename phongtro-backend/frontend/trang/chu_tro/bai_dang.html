@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Bài Đăng - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/phong_tro.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            <div class="page-container">
+                <div class="post-container">
+                    
+                    <!-- Form đăng bài mới (Dành cho Chủ trọ) -->
+                    <div class="post-form-card">
+                        <h3 style="margin-bottom: 1rem; color: #1e293b;">Tạo bài đăng mới</h3>
+                        <form id="form-create-post">
+                            <textarea id="post-content" rows="4" placeholder="Bạn muốn đăng tin cho thuê phòng? Mô tả chi tiết ở đây..." required></textarea>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Giá thuê (VNĐ/tháng)</label>
+                                    <input type="number" id="post-price" placeholder="VD: 2500000" min="0" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Diện tích (m²)</label>
+                                    <input type="number" id="post-area" placeholder="VD: 25" min="0" required>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <!-- Chức năng upload ảnh hiện tại chỉ là UI mô phỏng vì DB chưa hỗ trợ trường image_url -->
+                                <div class="upload-btn" onclick="alert('Chức năng upload ảnh đang được phát triển backend!')">
+                                    <i class="fa-solid fa-image"></i> Thêm ảnh
+                                </div>
+                                <button type="submit" class="btn-post" id="btn-submit">
+                                    <i class="fa-solid fa-paper-plane"></i> Đăng bài
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Danh sách bài đăng -->
+                    <h3 style="margin-bottom: 1.5rem; color: #1e293b;">Các bài đã đăng</h3>
+                    <div class="feed-list" id="feed-list">
+                        <div style="text-align:center; padding: 3rem; color: #94a3b8;">
+                            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                            <p style="margin-top: 1rem;">Đang tải danh sách bài viết...</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+        import { baiVietService } from '../../dich_vu/bai_viet.service.js';
+
+        // Khởi tạo trang, yêu cầu role LANDLORD
+        await app.init('Quản Lý Bài Đăng', 'LANDLORD');
+
+        const feedList = document.getElementById('feed-list');
+
+        // Render bài viết
+        async function loadPosts() {
+            try {
+                const res = await baiVietService.layDanhSach();
+                const posts = Array.isArray(res) ? res : (res.data || []);
+                
+                // Lọc bài viết của chính chủ trọ này
+                const myPosts = posts.filter(p => p.user_id === auth.user.id);
+
+                if (myPosts.length === 0) {
+                    feedList.innerHTML = `
+                        <div style="text-align:center; padding: 4rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                            <i class="fa-solid fa-newspaper fa-3x"></i>
+                            <p style="margin-top: 1rem; font-size: 1.1rem;">Bạn chưa có bài đăng nào.</p>
+                        </div>`;
+                    return;
+                }
+
+                feedList.innerHTML = myPosts.map(p => `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="post-author-avatar">${auth.user.username[0].toUpperCase()}</div>
+                            <div class="post-author-info">
+                                <div class="author-name">${auth.user.username}</div>
+                                <div class="post-time">${new Date(p.created_at).toLocaleString('vi-VN')}</div>
+                            </div>
+                            <div class="post-actions">
+                                <button class="btn-delete" onclick="deletePost(${p.id})" title="Xóa bài viết">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="post-body">
+                            <div class="post-details">
+                                ${p.price ? `<div class="detail-badge price"><i class="fa-solid fa-tag"></i> ${Number(p.price).toLocaleString('vi-VN')} đ/tháng</div>` : ''}
+                                ${p.area ? `<div class="detail-badge area"><i class="fa-solid fa-maximize"></i> ${p.area} m²</div>` : ''}
+                            </div>
+                            <div class="post-content">${escapeHtml(p.content)}</div>
+                            <!-- Mockup Ảnh bài viết -->
+                            <div class="post-image">
+                                <i class="fa-solid fa-house-chimney-window"></i>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error(error);
+                feedList.innerHTML = '<div style="color:red; text-align:center">Lỗi tải bài viết.</div>';
+            }
+        }
+
+        // Tạo bài viết mới
+        document.getElementById('form-create-post').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            const data = {
+                content: document.getElementById('post-content').value,
+                price: document.getElementById('post-price').value,
+                area: document.getElementById('post-area').value
+            };
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng...';
+                await baiVietService.taoBai(data);
+                
+                // Reset form & reload
+                document.getElementById('form-create-post').reset();
+                alert('Đăng bài thành công!');
+                loadPosts();
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Đăng bài';
+            }
+        });
+
+        // Xóa bài viết (Gắn vào window để gọi từ inline onclick)
+        window.deletePost = async function(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa bài viết này không?')) return;
+            try {
+                await baiVietService.xoaBai(id);
+                loadPosts(); // Load lại danh sách
+            } catch (error) {
+                alert('Xóa thất bại: ' + error.message);
+            }
+        };
+
+        // Helper chống XSS
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadPosts();
+    </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+@import url('responsive.css');
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: #f8fafc; color: #334155; }
+.app-layout { display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 260px; background: #fff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; height: 100%; }
+.sidebar-logo { padding: 1.5rem; font-size: 1.5rem; font-weight: bold; color: #0ea5e9; border-bottom: 1px solid #e2e8f0; }
+.sidebar-menu { list-style: none; flex: 1; padding: 1rem 0; overflow-y: auto; }
+.sidebar-menu li a { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 1.5rem; color: #64748b; text-decoration: none; transition: 0.2s; font-weight: 500;}
+.sidebar-menu li a:hover, .sidebar-menu li a.active { background: #f0f9ff; color: #0ea5e9; border-right: 3px solid #0ea5e9; }
+.sidebar-footer { padding: 1.5rem; border-top: 1px solid #e2e8f0; }
+.btn-logout { width: 100%; padding: 0.75rem; background: #fee2e2; color: #dc2626; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 0.5rem; transition: background 0.2s; }
+.btn-logout:hover { background: #fecaca; }
+.main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+.navbar { height: 70px; background: #fff; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; }
+.nav-right .user-info { display: flex; align-items: center; gap: 1rem; }
+.avatar { width: 40px; height: 40px; background: #0ea5e9; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+.page-container { flex: 1; overflow-y: auto; padding: 2rem; }
+
+/* Toast Notification (Bước 20) */
+#toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+.toast { background: #fff; border-left: 4px solid #0ea5e9; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 1rem; min-width: 300px; transform: translateX(120%); opacity: 0; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); }
+.toast.show { transform: translateX(0); opacity: 1; }
+.toast-icon { color: #0ea5e9; font-size: 1.5rem; }
+.toast-content { flex: 1; }
+.toast-title { font-weight: 600; color: #1e293b; margin-bottom: 0.25rem; font-size: 0.95rem; }
+.toast-message { color: #64748b; font-size: 0.85rem; }
+.toast-close { color: #94a3b8; cursor: pointer; border: none; background: none; font-size: 1.1rem; padding: 0.25rem; }
+.toast-close:hover { color: #475569; }
+
+/* Unread Badge (Bước 19) */
+.badge-unread { background: #ef4444; color: #fff; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-left: auto; display: none; }
+.badge-unread.show { display: inline-block; }

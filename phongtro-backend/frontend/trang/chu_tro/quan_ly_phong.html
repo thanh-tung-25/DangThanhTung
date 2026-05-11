@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Phòng - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/phong_tro.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/quan_ly_phong.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h2 style="color: #1e293b;"><i class="fa-solid fa-door-open text-blue-500"></i> Quản Lý Phòng</h2>
+                    <button class="btn-post" onclick="openRoomModal()">
+                        <i class="fa-solid fa-plus"></i> Thêm phòng mới
+                    </button>
+                </div>
+
+                <!-- Thanh công cụ tìm kiếm và lọc (Bước 15) -->
+                <div class="filter-bar">
+                    <div class="filter-search">
+                        <i class="fa-solid fa-search"></i>
+                        <input type="text" id="search-input" placeholder="Tìm kiếm theo tên phòng...">
+                    </div>
+                    <div class="filter-select">
+                        <select id="status-filter">
+                            <option value="ALL">Tất cả trạng thái</option>
+                            <option value="AVAILABLE">Trống (Available)</option>
+                            <option value="RENTED">Đã thuê (Rented)</option>
+                            <option value="MAINTENANCE">Bảo trì (Maintenance)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Danh sách phòng (Bước 13) -->
+                <div class="rooms-grid" id="rooms-list">
+                    <!-- Render qua JS -->
+                    <div style="grid-column: 1 / -1; text-align:center; padding: 4rem; color: #94a3b8;">
+                        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                        <p style="margin-top: 1rem;">Đang tải danh sách phòng...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thêm/Sửa Phòng (Bước 14) -->
+    <div class="modal-overlay" id="room-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Thêm phòng mới</h3>
+                <button class="btn-close" onclick="closeRoomModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-room">
+                    <input type="hidden" id="room-id">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label>Tên / Số phòng</label>
+                        <input type="text" id="room-name" placeholder="VD: Phòng 101" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label>Giá thuê (VNĐ/tháng)</label>
+                        <input type="number" id="room-price" placeholder="VD: 3000000" min="0" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label>Mô tả tiện ích</label>
+                        <textarea id="room-desc" class="chat-input" rows="3" style="width:100%; border-radius:8px; padding:0.75rem;" placeholder="Máy lạnh, máy nước nóng, có ban công..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-outline" onclick="closeRoomModal()">Hủy</button>
+                <button class="btn-post" id="btn-save-room" onclick="saveRoom()">Lưu lại</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { phongTroService } from '../../dich_vu/phong_tro.service.js';
+
+        await app.init('Quản Lý Phòng', 'LANDLORD');
+
+        let allRooms = [];
+
+        // Lấy danh sách phòng
+        async function loadRooms() {
+            try {
+                const res = await phongTroService.layDanhSachCuaToi();
+                allRooms = Array.isArray(res) ? res : (res.data || []);
+                renderRooms();
+            } catch (error) {
+                console.error(error);
+                document.getElementById('rooms-list').innerHTML = '<div style="color:red; text-align:center; grid-column: 1/-1;">Lỗi tải dữ liệu phòng.</div>';
+            }
+        }
+
+        // Render có kết hợp Filter/Search
+        function renderRooms() {
+            const list = document.getElementById('rooms-list');
+            const keyword = document.getElementById('search-input').value.toLowerCase();
+            const statusFilter = document.getElementById('status-filter').value;
+
+            const filtered = allRooms.filter(r => {
+                const matchName = (r.name || r.id.toString()).toLowerCase().includes(keyword);
+                const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
+                return matchName && matchStatus;
+            });
+
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align:center; padding: 4rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                        <i class="fa-solid fa-door-closed fa-3x"></i>
+                        <p style="margin-top: 1rem;">Không tìm thấy phòng nào phù hợp.</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(r => {
+                let statusLabel = 'Trống';
+                if(r.status === 'RENTED') statusLabel = 'Đã thuê';
+                if(r.status === 'MAINTENANCE') statusLabel = 'Bảo trì';
+
+                return `
+                    <div class="room-card">
+                        <div class="room-image">
+                            <i class="fa-solid fa-bed"></i>
+                            <div class="room-status status-${r.status}">${statusLabel}</div>
+                        </div>
+                        <div class="room-info">
+                            <div class="room-name">${r.name || `Phòng ${r.id}`}</div>
+                            <div class="room-price">${Number(r.price || 0).toLocaleString('vi-VN')} đ/tháng</div>
+                            <div class="room-desc">${r.description || 'Chưa có mô tả'}</div>
+                        </div>
+                        <div class="room-actions">
+                            <button class="btn-action btn-status" onclick="changeStatus(${r.id}, '${r.status}')" title="Đổi trạng thái">
+                                <i class="fa-solid fa-rotate"></i> Đổi
+                            </button>
+                            <button class="btn-action btn-edit" onclick="editRoom(${r.id})" title="Sửa" ${r.status !== 'AVAILABLE' ? 'disabled style="opacity:0.5"' : ''}>
+                                <i class="fa-solid fa-pen"></i>
+                            </button>
+                            <button class="btn-action btn-delete" onclick="deleteRoom(${r.id})" title="Xóa" ${r.status === 'RENTED' ? 'disabled style="opacity:0.5"' : ''}>
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Sự kiện Search & Filter
+        document.getElementById('search-input').addEventListener('input', renderRooms);
+        document.getElementById('status-filter').addEventListener('change', renderRooms);
+
+        // Đổi trạng thái nhanh
+        window.changeStatus = async function(id, currentStatus) {
+            const nextStatusMap = {
+                'AVAILABLE': 'MAINTENANCE',
+                'MAINTENANCE': 'AVAILABLE',
+                'RENTED': 'AVAILABLE' // Trong thực tế, phải thanh lý hợp đồng mới thành AVAILABLE
+            };
+            if(currentStatus === 'RENTED' && !confirm('Phòng này đang có người thuê. Bạn có chắc muốn đổi thành trạng thái trống? (Khuyên dùng: Hủy hợp đồng ở trang Hợp đồng)')) return;
+            
+            try {
+                await phongTroService.capNhatTrangThai(id, nextStatusMap[currentStatus]);
+                loadRooms();
+            } catch(e) {
+                alert('Lỗi cập nhật trạng thái');
+            }
+        };
+
+        // Modal Logic
+        window.openRoomModal = function() {
+            document.getElementById('form-room').reset();
+            document.getElementById('room-id').value = '';
+            document.getElementById('modal-title').textContent = 'Thêm phòng mới';
+            document.getElementById('room-modal').classList.add('active');
+        };
+
+        window.closeRoomModal = function() {
+            document.getElementById('room-modal').classList.remove('active');
+        };
+
+        window.editRoom = function(id) {
+            const room = allRooms.find(r => r.id === id);
+            if (!room) return;
+            
+            document.getElementById('room-id').value = room.id;
+            document.getElementById('room-name').value = room.name || '';
+            document.getElementById('room-price').value = room.price || '';
+            document.getElementById('room-desc').value = room.description || '';
+            
+            document.getElementById('modal-title').textContent = 'Sửa thông tin phòng';
+            document.getElementById('room-modal').classList.add('active');
+            
+            // Backend hiện chưa có endpoint PUT /phong/:id. Tính năng Sửa tạm thời giả lập trên UI.
+            alert('Tính năng cập nhật thông tin phòng (PUT) chưa được backend hỗ trợ! Chỉ có thể đổi trạng thái hoặc xóa.');
+        };
+
+        window.saveRoom = async function() {
+            const id = document.getElementById('room-id').value;
+            const data = {
+                name: document.getElementById('room-name').value,
+                price: document.getElementById('room-price').value,
+                description: document.getElementById('room-desc').value
+            };
+
+            if (!data.name || !data.price) {
+                alert('Vui lòng nhập tên và giá phòng');
+                return;
+            }
+
+            try {
+                const btn = document.getElementById('btn-save-room');
+                btn.disabled = true;
+                btn.innerHTML = 'Đang lưu...';
+
+                if (id) {
+                    // Update room (Giả định nếu backend có API PUT)
+                    // await api.put(`/phong/${id}`, data);
+                    alert('Backend chưa hỗ trợ cập nhật dữ liệu phòng (chỉ cập nhật trạng thái).');
+                } else {
+                    // Create room
+                    await phongTroService.themPhong(data);
+                    alert('Thêm phòng thành công!');
+                }
+                
+                closeRoomModal();
+                loadRooms();
+            } catch(e) {
+                alert('Lỗi: ' + e.message);
+            } finally {
+                const btn = document.getElementById('btn-save-room');
+                btn.disabled = false;
+                btn.innerHTML = 'Lưu lại';
+            }
+        };
+
+        window.deleteRoom = async function(id) {
+            if (!confirm('Bạn có chắc chắn muốn xóa phòng này?')) return;
+            try {
+                await phongTroService.xoaPhong(id);
+                loadRooms();
+            } catch(e) {
+                alert('Lỗi xóa phòng: ' + e.message);
+            }
+        };
+
+        loadRooms();
+    </script>
+</body>
+</html>

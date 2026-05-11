@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Điều Khiển - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/bang_dieu_khien.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            <div class="page-container">
+                <!-- Dashboard Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon icon-blue"><i class="fa-solid fa-door-open"></i></div>
+                        <div class="stat-info">
+                            <div class="value" id="stat-rooms">--</div>
+                            <div class="label">Tổng số phòng</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-green"><i class="fa-solid fa-file-contract"></i></div>
+                        <div class="stat-info">
+                            <div class="value" id="stat-contracts">--</div>
+                            <div class="label">Hợp đồng đang thuê</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon icon-purple"><i class="fa-solid fa-users"></i></div>
+                        <div class="stat-info">
+                            <div class="value" id="stat-tenants">--</div>
+                            <div class="label">Người thuê hiện tại</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Sections -->
+                <div class="dashboard-sections">
+                    <div class="card">
+                        <div class="card-header">
+                            Hoạt động gần đây
+                            <i class="fa-solid fa-chart-line text-blue-500"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-list" id="activity-list">
+                                <div style="color:#94a3b8; text-align:center; padding: 2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải dữ liệu...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            Thông báo & Tin nhắn
+                            <i class="fa-regular fa-bell text-blue-500"></i>
+                        </div>
+                        <div class="card-body">
+                            <div class="notif-list" id="notif-list">
+                                <div style="color:#94a3b8; text-align:center; padding: 2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải thông báo...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { api } from '../../tai_nguyen/js/api.js';
+
+        // 1. Khởi tạo Layout & Route Protection (Yêu cầu quyền LANDLORD)
+        await app.init('Bảng Điều Khiển', 'LANDLORD');
+
+        // 2. Tải dữ liệu Dashboard
+        async function loadDashboardData() {
+            try {
+                // Fetch song song các nguồn dữ liệu từ API để tổng hợp Dashboard
+                const [roomsRes, contractsRes, notifsRes, chatRes] = await Promise.all([
+                    api.get('/phong/me').catch(() => []),
+                    api.get('/hopdong').catch(() => []),
+                    api.get('/thongbao').catch(() => []),
+                    api.get('/chat/conversations').catch(() => [])
+                ]);
+
+                const rooms = Array.isArray(roomsRes) ? roomsRes : (roomsRes.data || []);
+                const contracts = Array.isArray(contractsRes) ? contractsRes : (contractsRes.data || []);
+                const notifs = Array.isArray(notifsRes) ? notifsRes : (notifsRes.data || []);
+                const chats = Array.isArray(chatRes) ? chatRes : (chatRes.data || []);
+
+                // ---------------------------------------------------------
+                // Bước 4: Dashboard Statistics
+                // ---------------------------------------------------------
+                const activeContracts = contracts.filter(c => c.status === 'ACTIVE' || c.status === 'PENDING');
+                
+                document.getElementById('stat-rooms').textContent = rooms.length;
+                document.getElementById('stat-contracts').textContent = activeContracts.length;
+                document.getElementById('stat-tenants').textContent = activeContracts.length; // 1 hợp đồng = 1 đại diện người thuê
+
+                // ---------------------------------------------------------
+                // Bước 5: Dashboard Activity
+                // ---------------------------------------------------------
+                
+                // --- Hoạt động gần đây (Lấy hợp đồng mới nhất làm ví dụ hoạt động) ---
+                const activityList = document.getElementById('activity-list');
+                if (contracts.length > 0) {
+                    activityList.innerHTML = contracts.slice(0, 5).map(c => `
+                        <div class="activity-item">
+                            <div class="activity-icon" style="color: #16a34a; background: #dcfce7">
+                                <i class="fa-solid fa-file-signature"></i>
+                            </div>
+                            <div class="activity-text">
+                                <div class="activity-title">Hợp đồng mới: Phòng ${c.room_id || 'Trống'} (${c.status})</div>
+                                <div class="activity-time">${new Date(c.created_at || Date.now()).toLocaleString('vi-VN')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    activityList.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:2rem;">Chưa có hoạt động nào gần đây.</div>';
+                }
+
+                // --- Thông báo và Tin nhắn mới nhất ---
+                const notifList = document.getElementById('notif-list');
+                let combinedFeeds = [];
+
+                // Lấy 3 thông báo mới nhất
+                if (notifs.length > 0) {
+                    combinedFeeds = combinedFeeds.concat(notifs.slice(0, 3).map(n => ({
+                        type: 'notif',
+                        content: n.content,
+                        time: new Date(n.created_at || Date.now()),
+                        icon: 'fa-bell',
+                        colorClass: 'color: #0ea5e9; background: #e0f2fe'
+                    })));
+                }
+
+                // Lấy 2 tin nhắn/cuộc trò chuyện mới nhất
+                if (chats.length > 0) {
+                    combinedFeeds = combinedFeeds.concat(chats.slice(0, 2).map(c => ({
+                        type: 'chat',
+                        content: `Tin nhắn từ ${c.other_user?.username || 'Khách'}: ${c.last_message || '...'}`,
+                        time: new Date(c.updated_at || Date.now()),
+                        icon: 'fa-comment-dots',
+                        colorClass: 'color: #9333ea; background: #f3e8ff'
+                    })));
+                }
+
+                // Sắp xếp giảm dần theo thời gian
+                combinedFeeds.sort((a, b) => b.time - a.time);
+
+                if (combinedFeeds.length > 0) {
+                    notifList.innerHTML = combinedFeeds.map(feed => `
+                        <div class="activity-item">
+                            <div class="activity-icon" style="${feed.colorClass}">
+                                <i class="fa-solid ${feed.icon}"></i>
+                            </div>
+                            <div class="activity-text">
+                                <div class="activity-title">${feed.content}</div>
+                                <div class="activity-time">${feed.time.toLocaleString('vi-VN')}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    notifList.innerHTML = '<div style="color:#94a3b8; text-align:center; padding:2rem;">Chưa có thông báo hoặc tin nhắn mới.</div>';
+                }
+
+            } catch (error) {
+                console.error("Lỗi tải dashboard data", error);
+                document.getElementById('activity-list').innerHTML = '<div style="color:red; text-align:center">Lỗi tải dữ liệu.</div>';
+                document.getElementById('notif-list').innerHTML = '<div style="color:red; text-align:center">Lỗi tải thông báo.</div>';
+            }
+        }
+
+        // Gọi hàm để đổ dữ liệu vào biểu đồ và danh sách
+        loadDashboardData();
+    </script>
+</body>
+</html>

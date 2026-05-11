@@ -3,69 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hệ thống Quản lý Phòng trọ</title>
-    <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <!-- Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- CSS -->
-    <link rel="stylesheet" href="./assets/css/main.css">
+    <title>RoomManager - Redirecting...</title>
+    <!-- Tự động chuyển hướng tới trang Đăng nhập / Bảng tin tùy theo logic -->
+    <meta http-equiv="refresh" content="0; url=trang/xac_thuc/dang_nhap.html">
+    <style>
+        body { font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; background: #f8fafc; color: #64748b; }
+    </style>
 </head>
 <body>
-    <!-- Navbar sẽ được load động hoặc ẩn hiện dựa vào router -->
-    <nav id="main-nav" style="display: none;">
-        <div class="nav-container">
-            <a href="/" data-link class="nav-logo">
-                <i class="fa-solid fa-building-user"></i> RoomManager
-            </a>
-            <div class="nav-links" id="nav-links">
-                <!-- Dynamic links based on role -->
-            </div>
-            <div class="nav-user">
-                <span id="nav-username"></span>
-                <button id="btn-logout" class="btn btn-outline-danger btn-sm">
-                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
-                </button>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Content Area -->
-    <main id="app">
-        <div class="loader">
-            <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải...
-        </div>
-    </main>
-
-    <!-- Toast Notification Container -->
-    <div id="toast-container"></div>
-
-    <script type="module">
-        import { auth } from './js/auth.js';
-
-        // Khởi tạo app
-        document.addEventListener('DOMContentLoaded', async () => {
-            await auth.init();
-            
-            const basePathMatch = window.location.pathname.match(/^(\/.*?\/frontend)/i);
-            const basePath = basePathMatch ? basePathMatch[1] : '';
-
-            if (!auth.isAuthenticated()) {
-                window.location.href = basePath + '/pages/dangnhap.html';
-                return;
+    <div style="text-align: center;">
+        <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: #0ea5e9; margin-bottom: 1rem;"></i>
+        <p>Đang chuyển hướng vào hệ thống...</p>
+        <script>
+            // Thử kiểm tra localStorage xem có user không, nếu có thì redirect thẳng
+            try {
+                const token = localStorage.getItem('roommanager_token');
+                const userRaw = localStorage.getItem('roommanager_user');
+                if (token && userRaw) {
+                    const user = JSON.parse(userRaw);
+                    if (user.role === 'LANDLORD') {
+                        window.location.href = 'trang/chu_tro/bang_dieu_khien.html';
+                    } else if (user.role === 'TENANT') {
+                        window.location.href = 'trang/nguoi_thue/bang_tin.html';
+                    } else {
+                        window.location.href = 'trang/xac_thuc/dang_nhap.html';
+                    }
+                } else {
+                    window.location.href = 'trang/xac_thuc/dang_nhap.html';
+                }
+            } catch(e) {
+                window.location.href = 'trang/xac_thuc/dang_nhap.html';
             }
-
-            const role = auth.getRole();
-            if (role === 'LANDLORD') {
-                window.location.href = basePath + '/pages/landlord/trangchu.html';
-            } else if (role === 'TENANT') {
-                window.location.href = basePath + '/pages/tenant/feed.html';
-            } else if (role === 'ADMIN') {
-                window.location.href = basePath + '/pages/admin/quanlyuser.html';
-            } else {
-                window.location.href = basePath + '/pages/dangnhap.html';
-            }
-        });
-    </script>
+        </script>
+    </div>
 </body>
 </html>

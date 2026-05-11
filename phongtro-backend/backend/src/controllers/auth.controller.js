@@ -1,4 +1,4 @@
-﻿const {
+const {
     registerService,
     loginService
 } = require("../services/auth.service");
@@ -16,10 +16,12 @@ const register = async (req, res) => {
         const data = await registerService(req.body);
         res.json({ message: "Register success", data });
     } catch (err) {
+        console.error("Register error:", err);
         if (err.message === "USER_EXISTS") {
             return res.status(400).json({ message: "User đã tồn tại" });
         }
-        res.status(500).json({ message: "Server error" });
+        console.error("Register Error:", err);
+        res.status(500).json({ message: "Server error", detail: err.message });
     }
 };
 
@@ -36,6 +38,7 @@ const login = async (req, res) => {
         const data = await loginService(req.body);
         res.json({ message: "Login success", ...data });
     } catch (err) {
+        console.error("Login error:", err);
         if (err.message === "USER_NOT_FOUND") {
             return res.status(400).json({ message: "User không tồn tại" });
         }

@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nhóm Trọ - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/tin_nhan.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="chat-layout">
+                <!-- Danh sách nhóm -->
+                <div class="chat-sidebar">
+                    <div class="chat-sidebar-header">
+                        Nhóm của tôi
+                        <button class="btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;" onclick="openCreateGroupModal()">
+                            <i class="fa-solid fa-plus"></i> Tạo nhóm
+                        </button>
+                    </div>
+                    <div class="conv-list" id="group-list">
+                        <div style="text-align:center; padding: 2rem; color: #94a3b8;">
+                            <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải...
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vùng Chat Nhóm -->
+                <div class="chat-main">
+                    <div class="chat-header" id="chat-header" style="display: none;">
+                        <div class="conv-avatar" style="background: linear-gradient(135deg, #10b981, #059669)">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div class="conv-info">
+                            <div class="conv-name" id="group-name">Tên nhóm</div>
+                            <div class="conv-last" id="group-member-count">... thành viên</div>
+                        </div>
+                        <div class="group-header-actions">
+                            <button class="btn-outline" onclick="openAddMemberModal()">
+                                <i class="fa-solid fa-user-plus text-green-500"></i> Thêm thành viên
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="empty-chat">
+                            <i class="fa-solid fa-users fa-3x"></i>
+                            <p>Chọn một nhóm để bắt đầu trò chuyện</p>
+                        </div>
+                    </div>
+
+                    <div class="chat-footer" id="chat-footer" style="display: none;">
+                        <div class="chat-input-wrapper">
+                            <input type="text" class="chat-input" id="msg-input" placeholder="Nhắn tin tới nhóm..." autocomplete="off">
+                        </div>
+                        <button class="btn-send" id="btn-send" style="background: linear-gradient(135deg, #10b981, #059669)">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals (Sử dụng prompt tạm thời cho nhanh, bạn có thể thay bằng HTML Modal sau) -->
+    
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+        import { socketService } from '../../tai_nguyen/js/socket.js';
+        import { nhomService } from '../../dich_vu/nhom.service.js';
+
+        await app.init('Nhóm Trọ', 'LANDLORD');
+
+        let currentGroupId = null;
+
+        socketService.connect();
+        socketService.onReceiveGroupMessage((msg) => {
+            if (msg.group_id === currentGroupId) {
+                appendMessage(msg);
+            }
+        });
+
+        async function loadGroups() {
+            const list = document.getElementById('group-list');
+            try {
+                const res = await nhomService.layDanhSachNhom();
+                const groups = Array.isArray(res) ? res : (res.data || []);
+                
+                if (groups.length === 0) {
+                    list.innerHTML = '<div style="text-align:center; padding:2rem; color:#94a3b8;">Bạn chưa tham gia nhóm nào.</div>';
+                    return;
+                }
+
+                list.innerHTML = groups.map(g => `
+                    <div class="conv-item ${g.id === currentGroupId ? 'active' : ''}" onclick="openGroup(${g.id}, '${g.name}', ${g.member_count || 0})">
+                        <div class="conv-avatar" style="background: linear-gradient(135deg, #10b981, #059669)"><i class="fa-solid fa-users"></i></div>
+                        <div class="conv-info">
+                            <div class="conv-name">${g.name}</div>
+                            <div class="conv-last">${g.member_count || 0} thành viên</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                list.innerHTML = '<div style="color:red; text-align:center;">Lỗi tải dữ liệu nhóm.</div>';
+            }
+        }
+
+        window.openGroup = async function(groupId, groupName, memberCount) {
+            currentGroupId = groupId;
+            document.getElementById('chat-header').style.display = 'flex';
+            document.getElementById('chat-footer').style.display = 'flex';
+            document.getElementById('group-name').textContent = groupName;
+            document.getElementById('group-member-count').textContent = `${memberCount} thành viên`;
+
+            document.querySelectorAll('.conv-item').forEach(el => el.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            const msgBox = document.getElementById('chat-messages');
+            msgBox.innerHTML = '<div style="text-align:center; padding: 2rem;"><i class="fa-solid fa-circle-notch fa-spin"></i></div>';
+
+            try {
+                const res = await nhomService.layTinNhanNhom(groupId);
+                const msgs = Array.isArray(res) ? res : (res.data || []);
+                
+                msgBox.innerHTML = '';
+                if (msgs.length === 0) {
+                    msgBox.innerHTML = '<div class="empty-chat"><p>Chưa có tin nhắn nào trong nhóm.</p></div>';
+                } else {
+                    msgs.forEach(m => appendMessage(m, false));
+                    msgBox.scrollTop = msgBox.scrollHeight;
+                }
+            } catch (error) {
+                msgBox.innerHTML = '<div style="color:red; text-align:center;">Lỗi tải tin nhắn nhóm.</div>';
+            }
+        };
+
+        function appendMessage(msg, scroll = true) {
+            const msgBox = document.getElementById('chat-messages');
+            const empty = msgBox.querySelector('.empty-chat');
+            if (empty) empty.remove();
+
+            const isMine = msg.sender_id === auth.user.id;
+            const div = document.createElement('div');
+            div.className = `msg-wrapper ${isMine ? 'mine' : 'other'}`;
+            
+            const time = new Date(msg.created_at || Date.now()).toLocaleTimeString('vi-VN', {hour:'2-digit', minute:'2-digit'});
+            
+            div.innerHTML = `
+                ${!isMine ? `<div class="msg-sender">${msg.sender_name || 'Thành viên'}</div>` : ''}
+                <div class="msg-bubble ${isMine ? 'msg-mine' : 'msg-other'}" ${isMine ? 'style="background: linear-gradient(135deg, #10b981, #059669)"' : ''}>
+                    ${escapeHtml(msg.content)}
+                </div>
+                <div class="msg-meta">${time}</div>
+            `;
+            
+            msgBox.appendChild(div);
+            if (scroll) msgBox.scrollTop = msgBox.scrollHeight;
+        }
+
+        async function sendMessage() {
+            if (!currentGroupId) return;
+            const input = document.getElementById('msg-input');
+            const content = input.value.trim();
+            if (!content) return;
+            
+            input.value = '';
+            appendMessage({ sender_id: auth.user.id, content: content, created_at: new Date() });
+
+            try {
+                await nhomService.guiTinNhanNhom(currentGroupId, content);
+            } catch (error) {
+                alert('Lỗi gửi tin nhắn');
+            }
+        }
+
+        document.getElementById('btn-send').addEventListener('click', sendMessage);
+        document.getElementById('msg-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); sendMessage(); }
+        });
+
+        // Chức năng Tạo nhóm
+        window.openCreateGroupModal = async function() {
+            const name = prompt('Nhập tên nhóm mới:');
+            if (!name) return;
+            try {
+                await nhomService.taoNhom(name);
+                alert('Tạo nhóm thành công!');
+                loadGroups();
+            } catch(e) {
+                alert('Tạo thất bại: ' + e.message);
+            }
+        };
+
+        // Chức năng Thêm thành viên
+        window.openAddMemberModal = async function() {
+            const userId = prompt('Nhập ID của Người thuê để thêm vào nhóm:');
+            if (!userId) return;
+            try {
+                await nhomService.themThanhVien(currentGroupId, parseInt(userId));
+                alert('Thêm thành công!');
+                loadGroups(); // Tải lại để cập nhật số lượng thành viên
+            } catch(e) {
+                alert('Thêm thất bại: ' + e.message);
+            }
+        };
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadGroups();
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+/* Styles cho Feed bài viết và quản lý bài đăng */
+.post-container { max-width: 800px; margin: 0 auto; }
+.post-form-card { background: #fff; padding: 1.5rem; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.post-form-card textarea { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; resize: none; font-size: 1rem; margin-bottom: 1rem; outline: none; transition: border-color 0.2s; }
+.post-form-card textarea:focus { border-color: #0ea5e9; box-shadow: 0 0 0 3px #e0f2fe; }
+.form-row { display: flex; gap: 1rem; margin-bottom: 1rem; }
+.form-group { flex: 1; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; }
+.form-group input { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; outline: none; }
+.form-group input:focus { border-color: #0ea5e9; }
+.form-actions { display: flex; justify-content: space-between; align-items: center; }
+.btn-post { background: #0ea5e9; color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+.btn-post:hover { background: #0284c7; }
+
+/* Upload ảnh giả lập (UI only, backend chưa có) */
+.upload-btn { display: inline-flex; align-items: center; gap: 0.5rem; color: #64748b; background: #f1f5f9; padding: 0.5rem 1rem; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+.upload-btn:hover { background: #e2e8f0; color: #334155; }
+
+/* Feed Posts */
+.feed-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.post-card { background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+.post-header { padding: 1.25rem 1.5rem; display: flex; align-items: center; gap: 1rem; border-bottom: 1px solid #f8fafc; }
+.post-author-avatar { width: 44px; height: 44px; background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.2rem; }
+.post-author-info .author-name { font-weight: 600; color: #1e293b; }
+.post-author-info .post-time { font-size: 0.8rem; color: #94a3b8; }
+.post-actions { margin-left: auto; display: flex; gap: 0.5rem; }
+.btn-delete { color: #ef4444; background: #fee2e2; border: none; padding: 0.5rem; border-radius: 8px; cursor: pointer; }
+.btn-delete:hover { background: #fecaca; }
+
+.post-body { padding: 1.5rem; }
+.post-content { color: #334155; line-height: 1.6; margin-bottom: 1rem; white-space: pre-wrap; }
+.post-details { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+.detail-badge { background: #f1f5f9; color: #475569; padding: 0.5rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.5rem; }
+.detail-badge.price { background: #fef3c7; color: #b45309; }
+.detail-badge.area { background: #e0e7ff; color: #4338ca; }
+.post-image { width: 100%; height: 250px; background: #e2e8f0; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 2rem; border-radius: 8px; }
+
+.post-footer { padding: 1.25rem 1.5rem; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; }
+.btn-contact { background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.5rem; transition: 0.2s; }
+.btn-contact:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); }

@@ -1,4 +1,4 @@
-﻿require("dotenv").config();
+require("dotenv").config();
 
 const app = require("./app");
 const http = require("http");
@@ -25,6 +25,9 @@ const io = new Server(server, {
 
 // 👉 GẮN IO VÀO SERVICE
 setIO(io);
+
+// 👉 GẮN IO VÀO APP để Controller dùng được
+app.set('io', io);
 
 // 👉 SOCKET EVENT
 io.on("connection", (socket) => {

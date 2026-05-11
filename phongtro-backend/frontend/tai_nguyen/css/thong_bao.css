@@ -1,0 +1,26 @@
+/* CSS cho Trang Thông Báo */
+.notif-container { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.notif-header { padding: 1.5rem; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc; }
+.notif-header h3 { color: #1e293b; display: flex; align-items: center; gap: 0.5rem; }
+
+.notif-list { display: flex; flex-direction: column; }
+.notif-item { display: flex; gap: 1rem; padding: 1.25rem 1.5rem; border-bottom: 1px solid #f1f5f9; transition: background 0.2s; cursor: pointer; }
+.notif-item:hover { background: #f8fafc; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread { background: #eff6ff; }
+.notif-item.unread:hover { background: #e0f2fe; }
+
+.notif-icon { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+.icon-sys { background: #e2e8f0; color: #64748b; }
+.icon-contract { background: #dcfce7; color: #16a34a; }
+.icon-chat { background: #f3e8ff; color: #9333ea; }
+.icon-alert { background: #fee2e2; color: #ef4444; }
+
+.notif-content { flex: 1; }
+.notif-title { font-weight: 600; color: #1e293b; margin-bottom: 0.25rem; }
+.notif-item.unread .notif-title { color: #0ea5e9; }
+.notif-desc { color: #64748b; font-size: 0.95rem; line-height: 1.5; margin-bottom: 0.5rem; }
+.notif-time { font-size: 0.8rem; color: #94a3b8; display: flex; align-items: center; gap: 0.25rem; }
+
+.empty-notif { padding: 4rem 2rem; text-align: center; color: #94a3b8; }
+.empty-notif i { font-size: 3rem; margin-bottom: 1rem; color: #cbd5e1; }

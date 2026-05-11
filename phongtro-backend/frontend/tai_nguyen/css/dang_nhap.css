@@ -1,0 +1,33 @@
+/* CSS cho Trang Đăng Nhập / Đăng Ký */
+.auth-layout { min-height: 100vh; display: flex; background: #f8fafc; font-family: 'Inter', sans-serif; }
+.auth-left { flex: 1; background: linear-gradient(135deg, #0ea5e9, #4f46e5); color: #fff; padding: 4rem; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+@media (max-width: 900px) { .auth-left { display: none; } }
+.auth-left h1 { font-size: 3rem; font-weight: 800; margin-bottom: 1.5rem; line-height: 1.2; z-index: 10; }
+.auth-left p { font-size: 1.1rem; line-height: 1.6; opacity: 0.9; max-width: 450px; z-index: 10; }
+
+.auth-right { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; background: #fff; }
+.auth-card { width: 100%; max-width: 420px; }
+.auth-header { text-align: center; margin-bottom: 2.5rem; }
+.auth-header h2 { font-size: 1.75rem; color: #1e293b; margin-bottom: 0.5rem; }
+.auth-header p { color: #64748b; }
+
+.form-group { margin-bottom: 1.25rem; }
+.form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; }
+.input-icon-wrap { position: relative; }
+.input-icon-wrap i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+.auth-input { width: 100%; padding: 0.85rem 1rem 0.85rem 2.5rem; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 1rem; color: #1e293b; outline: none; transition: 0.2s; background: #f8fafc; }
+.auth-input:focus { border-color: #0ea5e9; background: #fff; box-shadow: 0 0 0 3px #e0f2fe; }
+
+.btn-auth { width: 100%; background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; border: none; padding: 0.85rem; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.2s; display: flex; justify-content: center; align-items: center; gap: 0.5rem; margin-top: 1.5rem; }
+.btn-auth:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3); }
+
+.auth-footer { text-align: center; margin-top: 2rem; font-size: 0.9rem; color: #64748b; }
+.auth-footer a { color: #0ea5e9; text-decoration: none; font-weight: 600; }
+.auth-footer a:hover { text-decoration: underline; }
+
+/* Role Selector */
+.role-select { display: flex; gap: 1rem; margin-bottom: 1.5rem; }
+.role-option { flex: 1; border: 1px solid #cbd5e1; padding: 1rem; border-radius: 8px; text-align: center; cursor: pointer; transition: 0.2s; background: #f8fafc; color: #64748b; }
+.role-option i { font-size: 1.5rem; margin-bottom: 0.5rem; display: block; }
+.role-option.active { border-color: #0ea5e9; background: #e0f2fe; color: #0ea5e9; }
+.role-option.active i { color: #0ea5e9; }

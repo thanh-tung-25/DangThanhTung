@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bảng Tin Phòng Trọ - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/phong_tro.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar của Người thuê (tạm dùng chung code logic, nhưng menu sẽ khác. Ta render tĩnh ở đây) -->
+        <aside class="sidebar" id="sidebar-container">
+            <div class="sidebar-logo">RoomManager</div>
+            <ul class="sidebar-menu">
+                <li><a href="../../trang/nguoi_thue/bang_tin.html" class="active"><i class="fa-solid fa-newspaper"></i> Bảng tin phòng</a></li>
+                <li><a href="../../trang/nguoi_thue/tin_nhan.html"><i class="fa-solid fa-comment-dots"></i> Tin nhắn</a></li>
+                <li><a href="../../trang/nguoi_thue/hop_dong.html"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
+                <li><a href="../../trang/nguoi_thue/nhom.html"><i class="fa-solid fa-users"></i> Nhóm trọ</a></li>
+                <li><a href="../../trang/nguoi_thue/thong_bao.html"><i class="fa-solid fa-bell"></i> Thông báo</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="btn-logout" class="btn-logout"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <div class="post-container">
+                    <h2 style="margin-bottom: 1.5rem; color: #1e293b;"><i class="fa-solid fa-house-user text-blue-500"></i> Phòng trọ mới nhất</h2>
+                    
+                    <!-- Danh sách bài đăng cho người thuê -->
+                    <div class="feed-list" id="feed-list">
+                        <div style="text-align:center; padding: 3rem; color: #94a3b8;">
+                            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                            <p style="margin-top: 1rem;">Đang tải danh sách bài viết...</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+        import { baiVietService } from '../../dich_vu/bai_viet.service.js';
+        import { api } from '../../tai_nguyen/js/api.js';
+
+        // Tạm ghi đè loadComponent của app.js để không ghi đè sidebar tĩnh vừa viết ở trên
+        const originalLoad = app.loadComponent;
+        app.loadComponent = async function(id, url) {
+            if (id === 'sidebar-container') return; // Bỏ qua sidebar để dùng sidebar người thuê
+            await originalLoad.call(app, id, url);
+        };
+
+        // Khởi tạo trang, yêu cầu role TENANT
+        await app.init('Bảng Tin Phòng Trọ', 'TENANT');
+
+        const feedList = document.getElementById('feed-list');
+
+        // Tải feed
+        async function loadFeed() {
+            try {
+                const res = await baiVietService.layDanhSach();
+                const posts = Array.isArray(res) ? res : (res.data || []);
+
+                if (posts.length === 0) {
+                    feedList.innerHTML = `
+                        <div style="text-align:center; padding: 4rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                            <i class="fa-solid fa-house-circle-xmark fa-3x"></i>
+                            <p style="margin-top: 1rem; font-size: 1.1rem;">Chưa có phòng trọ nào được đăng.</p>
+                        </div>`;
+                    return;
+                }
+
+                feedList.innerHTML = posts.map(p => `
+                    <div class="post-card">
+                        <div class="post-header">
+                            <div class="post-author-avatar" style="background: linear-gradient(135deg, #0ea5e9, #6366f1)">
+                                ${(p.username || 'C')[0].toUpperCase()}
+                            </div>
+                            <div class="post-author-info">
+                                <div class="author-name">${p.username || 'Chủ trọ ẩn danh'}</div>
+                                <div class="post-time">${new Date(p.created_at).toLocaleString('vi-VN')}</div>
+                            </div>
+                        </div>
+                        <div class="post-body">
+                            <!-- Mockup Ảnh -->
+                            <div class="post-image" style="background: linear-gradient(135deg, #bfdbfe, #ddd6fe); color: #6366f1;">
+                                <i class="fa-solid fa-house-chimney-window"></i>
+                            </div>
+                            <br>
+                            <div class="post-details">
+                                ${p.price ? `<div class="detail-badge price"><i class="fa-solid fa-money-bill"></i> ${Number(p.price).toLocaleString('vi-VN')} đ/tháng</div>` : ''}
+                                ${p.area ? `<div class="detail-badge area"><i class="fa-solid fa-maximize"></i> ${p.area} m²</div>` : ''}
+                            </div>
+                            <div class="post-content">${escapeHtml(p.content)}</div>
+                        </div>
+                        <div class="post-footer">
+                            <button class="btn-contact" onclick="contactLandlord(${p.user_id})">
+                                <i class="fa-solid fa-comment-dots"></i> Liên hệ chủ trọ
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error(error);
+                feedList.innerHTML = '<div style="color:red; text-align:center">Lỗi tải dữ liệu bảng tin.</div>';
+            }
+        }
+
+        // Bước 8: Xử lý nút Liên hệ -> Tạo conversation -> Chuyển sang chat
+        window.contactLandlord = async function(landlordId) {
+            if (!landlordId) {
+                alert("Lỗi: Không tìm thấy ID chủ trọ.");
+                return;
+            }
+
+            try {
+                // Hiển thị loading (tùy chọn)
+                const btn = event.currentTarget;
+                const originalHtml = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang kết nối...';
+
+                // Gọi API POST /chat/tao (tạo conversation)
+                const res = await api.post('/chat/tao', { receiver_id: landlordId });
+                
+                // Trả về { id: <conversation_id> } hoặc thông tin cuộc trò chuyện
+                const convId = res.id || (res.data ? res.data.id : null);
+                
+                if (convId) {
+                    // Chuyển hướng sang trang tin nhắn kèm param ID cuộc trò chuyện
+                    window.location.href = `../../trang/nguoi_thue/tin_nhan.html?conv_id=${convId}`;
+                } else {
+                    // Fallback nếu API không trả về ID rõ ràng
+                    window.location.href = `../../trang/nguoi_thue/tin_nhan.html`;
+                }
+
+            } catch (error) {
+                alert('Không thể tạo cuộc trò chuyện: ' + error.message);
+                event.currentTarget.disabled = false;
+                event.currentTarget.innerHTML = '<i class="fa-solid fa-comment-dots"></i> Liên hệ chủ trọ';
+            }
+        };
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        loadFeed();
+    </script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng Ký - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/dang_nhap.css">
+</head>
+<body>
+    <div class="auth-layout">
+        <!-- Cột trái: Giới thiệu -->
+        <div class="auth-left">
+            <h1>Khởi Đầu<br>Mới Cùng<br>RoomManager.</h1>
+            <p>Dù bạn là chủ sở hữu nhiều phòng trọ hay là người đi thuê, chúng tôi đều có các công cụ giúp bạn dễ dàng theo dõi và quản lý.</p>
+            <div style="position: absolute; bottom: -50px; right: -50px; opacity: 0.1;">
+                <i class="fa-solid fa-users-rectangle" style="font-size: 30rem;"></i>
+            </div>
+        </div>
+
+        <!-- Cột phải: Form đăng ký -->
+        <div class="auth-right">
+            <div class="auth-card" style="max-width: 450px;">
+                <div class="auth-header" style="margin-bottom: 1.5rem;">
+                    <h2>Tạo tài khoản mới</h2>
+                    <p>Chọn vai trò của bạn để tiếp tục</p>
+                </div>
+
+                <form id="form-register">
+                    <!-- Chọn Role -->
+                    <div class="role-select" id="role-selector">
+                        <div class="role-option active" data-role="TENANT">
+                            <i class="fa-solid fa-user"></i>
+                            Người Thuê
+                        </div>
+                        <div class="role-option" data-role="LANDLORD">
+                            <i class="fa-solid fa-house-user"></i>
+                            Chủ Trọ
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tên đăng nhập</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-user-tag"></i>
+                            <input type="text" class="auth-input" id="username" placeholder="Nhập tên đăng nhập (viết liền không dấu)" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Mật khẩu</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-lock"></i>
+                            <input type="password" class="auth-input" id="password" placeholder="Tối thiểu 6 ký tự" required minlength="6">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Xác nhận mật khẩu</label>
+                        <div class="input-icon-wrap">
+                            <i class="fa-solid fa-shield-check"></i>
+                            <input type="password" class="auth-input" id="confirm-password" placeholder="Nhập lại mật khẩu" required minlength="6">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-auth" id="btn-submit">
+                        Đăng Ký
+                    </button>
+                </form>
+
+                <div class="auth-footer">
+                    Đã có tài khoản? <a href="dang_nhap.html">Đăng nhập</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container cho Toast Error -->
+    <div id="toast-container" style="position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px;"></div>
+
+    <script type="module">
+        import { auth } from '../../tai_nguyen/js/xac_thuc.js';
+
+        // Ngăn người dùng đã đăng nhập vào lại trang này
+        auth.checkGuest();
+
+        let selectedRole = 'TENANT'; // Mặc định
+
+        // Xử lý chọn role
+        const roleOptions = document.querySelectorAll('.role-option');
+        roleOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                roleOptions.forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+                selectedRole = opt.dataset.role;
+            });
+        });
+
+        // Hàm render Toast rút gọn cho trang Auth
+        function showAuthToast(msg, type = 'error') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const color = type === 'error' ? '#ef4444' : '#10b981';
+            const icon = type === 'error' ? 'fa-circle-exclamation' : 'fa-check-circle';
+            
+            toast.style.cssText = `background: #fff; border-left: 4px solid ${color}; border-radius: 8px; padding: 1rem 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 1rem; transform: translateX(120%); transition: all 0.3s; min-width: 250px;`;
+            toast.innerHTML = `<i class="fa-solid ${icon}" style="color: ${color};"></i> <div style="flex:1; color:#1e293b; font-size:0.9rem;">${msg}</div>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.style.transform = 'translateX(0)', 10);
+            setTimeout(() => {
+                toast.style.transform = 'translateX(120%)';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        document.getElementById('form-register').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('btn-submit');
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const confirmPass = document.getElementById('confirm-password').value.trim();
+
+            if (password !== confirmPass) {
+                showAuthToast('Mật khẩu xác nhận không khớp');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+                
+                await auth.register(username, password, selectedRole);
+                
+                showAuthToast('Đăng ký thành công! Đang chuyển hướng...', 'success');
+                // Chờ một chút rồi redirect
+                setTimeout(() => {
+                    window.location.href = 'dang_nhap.html';
+                }, 1500);
+
+            } catch (error) {
+                showAuthToast(error.message);
+            } finally {
+                if(!btn.disabled || btn.innerHTML.includes('lý')) {
+                    btn.disabled = false;
+                    btn.innerHTML = 'Đăng Ký';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

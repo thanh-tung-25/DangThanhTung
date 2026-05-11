@@ -1,12 +1,11 @@
 
 const db = require("../config/db");
 const bcrypt = require("bcrypt");
-const { generateToken } = require("../utils/jwt");
 
 const registerService = async ({ username, password, role }) => {
     const [existing] = await db.query(
         "SELECT id FROM users WHERE username = ?",
-        [username]
+        { replacements: [username] }
     );
 
     if (existing.length > 0) {
@@ -22,7 +21,7 @@ const registerService = async ({ username, password, role }) => {
 
     const [result] = await db.query(
         "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-        [username, hashedPassword, userRole]
+        { replacements: [username, hashedPassword, userRole] }
     );
 
     return { id: result.insertId, username, role: userRole };
@@ -31,7 +30,7 @@ const registerService = async ({ username, password, role }) => {
 const loginService = async ({ username, password }) => {
     const [rows] = await db.query(
         "SELECT * FROM users WHERE username = ?",
-        [username]
+        { replacements: [username] }
     );
 
     if (rows.length === 0) {
@@ -65,7 +64,11 @@ await db.query(
     }
 );
 
-return { accessToken, refreshToken };
+return { 
+    accessToken, 
+    refreshToken,
+    user: { id: user.id, username: user.username, role: user.role }
+};
 };
 
 module.exports = {

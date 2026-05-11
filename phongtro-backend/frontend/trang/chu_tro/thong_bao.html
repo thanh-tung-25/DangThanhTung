@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thông Báo - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/thong_bao.css">
+</head>
+<body>
+    <div class="app-layout">
+        <div id="sidebar-container"></div>
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <div class="notif-container">
+                    <div class="notif-header">
+                        <h3><i class="fa-solid fa-bell text-blue-500"></i> Thông Báo Của Bạn</h3>
+                    </div>
+                    <div class="notif-list" id="notif-list">
+                        <div style="text-align:center; padding: 4rem; color: #94a3b8;">
+                            <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                            <p style="margin-top: 1rem;">Đang tải danh sách thông báo...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { thongBaoService } from '../../dich_vu/thong_bao.service.js';
+
+        // Có thể tái sử dụng cho cả LANDLORD và TENANT, ở đây ta dùng role hiện tại
+        // Nếu file này ở chu_tro thì role là LANDLORD, nguoi_thue thì TENANT
+        const role = window.location.pathname.includes('chu_tro') ? 'LANDLORD' : 'TENANT';
+        
+        // Khởi tạo app (sẽ tự động bắt đầu nghe socket thông báo)
+        await app.init('Thông Báo', role);
+
+        // Gắn vào window để socket trong app.js có thể gọi tự động update
+        window.loadNotifications = async function() {
+            const list = document.getElementById('notif-list');
+            try {
+                const res = await thongBaoService.layDanhSach();
+                const notifs = Array.isArray(res) ? res : (res.data || []);
+                
+                if (notifs.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-notif">
+                            <i class="fa-regular fa-bell-slash"></i>
+                            <p>Bạn không có thông báo nào.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                list.innerHTML = notifs.map(n => {
+                    let iconClass = 'icon-sys';
+                    let iconHtml = '<i class="fa-solid fa-info"></i>';
+                    let title = 'Thông báo hệ thống';
+
+                    if (n.type === 'CONTRACT') {
+                        iconClass = 'icon-contract';
+                        iconHtml = '<i class="fa-solid fa-file-signature"></i>';
+                        title = 'Cập nhật hợp đồng';
+                    } else if (n.type === 'CHAT' || n.content.toLowerCase().includes('tin nhắn')) {
+                        iconClass = 'icon-chat';
+                        iconHtml = '<i class="fa-solid fa-comment-dots"></i>';
+                        title = 'Tin nhắn mới';
+                    }
+
+                    return `
+                        <div class="notif-item ${!n.is_read ? 'unread' : ''}" onclick="markAsRead(${n.id}, this)">
+                            <div class="notif-icon ${iconClass}">
+                                ${iconHtml}
+                            </div>
+                            <div class="notif-content">
+                                <div class="notif-title">${title}</div>
+                                <div class="notif-desc">${n.content}</div>
+                                <div class="notif-time">
+                                    <i class="fa-regular fa-clock"></i> 
+                                    ${new Date(n.created_at).toLocaleString('vi-VN')}
+                                </div>
+                            </div>
+                            ${!n.is_read ? '<div style="width:10px; height:10px; background:#0ea5e9; border-radius:50%; margin-top:0.5rem;"></div>' : ''}
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                list.innerHTML = '<div style="color:red; text-align:center; padding: 2rem;">Lỗi tải thông báo.</div>';
+            }
+        };
+
+        window.markAsRead = async function(id, element) {
+            // Nếu đã đọc rồi thì không gọi lại API
+            if (!element.classList.contains('unread')) return;
+
+            try {
+                await thongBaoService.danhDauDaDoc(id);
+                
+                // Cập nhật giao diện cục bộ
+                element.classList.remove('unread');
+                const dot = element.querySelector('div[style*="border-radius:50%"]');
+                if (dot) dot.remove();
+
+                // Trừ số lượng badge trên thanh sidebar
+                if (app.unreadCount > 0) {
+                    app.unreadCount--;
+                    app.updateBadge();
+                }
+            } catch (error) {
+                console.error("Lỗi đánh dấu đã đọc", error);
+            }
+        };
+
+        // Chạy lần đầu
+        window.loadNotifications();
+    </script>
+</body>
+</html>

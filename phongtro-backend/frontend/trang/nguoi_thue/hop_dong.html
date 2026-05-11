@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hợp Đồng Thuê - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/hop_dong.css">
+</head>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar của Người thuê (giữ nguyên layout cũ của bạn) -->
+        <aside class="sidebar" id="sidebar-container">
+            <div class="sidebar-logo">RoomManager</div>
+            <ul class="sidebar-menu">
+                <li><a href="../../trang/nguoi_thue/bang_tin.html"><i class="fa-solid fa-newspaper"></i> Bảng tin phòng</a></li>
+                <li><a href="../../trang/nguoi_thue/tin_nhan.html"><i class="fa-solid fa-comment-dots"></i> Tin nhắn</a></li>
+                <li><a href="../../trang/nguoi_thue/hop_dong.html" class="active"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
+                <li><a href="../../trang/nguoi_thue/nhom.html"><i class="fa-solid fa-users"></i> Nhóm trọ</a></li>
+                <li><a href="../../trang/nguoi_thue/thong_bao.html"><i class="fa-solid fa-bell"></i> Thông báo</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="btn-logout" class="btn-logout"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                
+                <!-- Khu vực Tạo Hợp Đồng Mới (Bước 17) -->
+                <div class="contract-form-card" style="margin-bottom: 2rem; margin-left: 0;">
+                    <h3><i class="fa-solid fa-file-signature text-blue-500"></i> Gửi yêu cầu ký hợp đồng mới</h3>
+                    <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 1.5rem;">Nhập ID phòng bạn muốn thuê để gửi yêu cầu cho chủ trọ xác nhận.</p>
+                    
+                    <form id="form-create-contract">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                            <div style="grid-column: 1 / -1;">
+                                <label style="display:block; font-size:0.85rem; font-weight:600; color:#64748b; margin-bottom:0.5rem;">Mã Phòng (ID)</label>
+                                <input type="number" id="room-id" class="chat-input" style="border-radius:8px; padding:0.75rem;" placeholder="Nhập ID phòng (vd: 1)" required>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.85rem; font-weight:600; color:#64748b; margin-bottom:0.5rem;">Ngày bắt đầu</label>
+                                <input type="date" id="start-date" class="chat-input" style="border-radius:8px; padding:0.75rem;" required>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.85rem; font-weight:600; color:#64748b; margin-bottom:0.5rem;">Ngày kết thúc (Dự kiến)</label>
+                                <input type="date" id="end-date" class="chat-input" style="border-radius:8px; padding:0.75rem;" required>
+                            </div>
+                        </div>
+                        <button type="submit" id="btn-submit" style="background: linear-gradient(135deg, #0ea5e9, #6366f1); color: #fff; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                            <i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu ký
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Table Hợp đồng của tôi (Bước 16) -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2 style="color: #1e293b;"><i class="fa-solid fa-file-contract text-blue-500"></i> Hợp đồng của tôi</h2>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Mã HĐ</th>
+                                <th>Phòng</th>
+                                <th>Ngày bắt đầu</th>
+                                <th>Ngày kết thúc</th>
+                                <th>Trạng thái</th>
+                                <th style="text-align: right;">Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody id="contract-list">
+                            <tr>
+                                <td colspan="6" style="text-align:center; padding: 3rem; color: #94a3b8;">
+                                    <i class="fa-solid fa-circle-notch fa-spin"></i> Đang tải danh sách hợp đồng...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { hopDongService } from '../../dich_vu/hop_dong.service.js';
+
+        const originalLoad = app.loadComponent;
+        app.loadComponent = async function(id, url) {
+            if (id === 'sidebar-container') return;
+            await originalLoad.call(app, id, url);
+        };
+
+        await app.init('Quản Lý Hợp Đồng', 'TENANT');
+
+        // Set giá trị mặc định cho form date
+        const today = new Date();
+        document.getElementById('start-date').valueAsDate = today;
+        const nextYear = new Date();
+        nextYear.setFullYear(today.getFullYear() + 1);
+        document.getElementById('end-date').valueAsDate = nextYear;
+
+        // Tạo hợp đồng
+        document.getElementById('form-create-contract').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-submit');
+            
+            const data = {
+                room_id: document.getElementById('room-id').value,
+                start_date: document.getElementById('start-date').value,
+                end_date: document.getElementById('end-date').value
+            };
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi...';
+                await hopDongService.taoHopDong(data);
+                alert('Gửi yêu cầu thuê phòng thành công! Hãy chờ chủ trọ xác nhận.');
+                loadContracts();
+            } catch (error) {
+                alert('Lỗi: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Gửi yêu cầu ký';
+            }
+        });
+
+        // Load hợp đồng
+        async function loadContracts() {
+            const list = document.getElementById('contract-list');
+            try {
+                const res = await hopDongService.layDanhSach();
+                const contracts = Array.isArray(res) ? res : (res.data || []);
+                
+                if (contracts.length === 0) {
+                    list.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 2rem; color: #94a3b8;">Bạn chưa có hợp đồng nào.</td></tr>`;
+                    return;
+                }
+
+                list.innerHTML = contracts.map(c => {
+                    let statusClass = 'PENDING';
+                    let statusText = 'Chờ xác nhận';
+                    
+                    if (c.status === 'ACTIVE') {
+                        statusClass = 'ACTIVE';
+                        statusText = 'Đang hiệu lực';
+                    } else if (c.status === 'CANCELLED') {
+                        statusClass = 'CANCELLED';
+                        statusText = 'Đã hủy';
+                    } else if (c.status === 'PENDING') {
+                        if (!c.tenant_confirmed) statusText = 'Cần bạn xác nhận';
+                        else if (!c.owner_confirmed) statusText = 'Chờ chủ trọ xác nhận';
+                    }
+
+                    // Hành động
+                    let actionHtml = '';
+                    if (c.status === 'PENDING' && !c.tenant_confirmed) {
+                        actionHtml = `
+                            <button class="btn-post btn-sm" onclick="confirmContract(${c.id})">
+                                <i class="fa-solid fa-check"></i> Xác nhận
+                            </button>
+                        `;
+                    } else if (statusClass === 'ACTIVE') {
+                        actionHtml = `<span style="color:#16a34a; font-size:0.85rem;"><i class="fa-solid fa-check-circle"></i> Hoàn tất</span>`;
+                    } else {
+                        actionHtml = `<span style="color:#94a3b8; font-size:0.85rem;">Đang chờ xử lý...</span>`;
+                    }
+
+                    return `
+                        <tr>
+                            <td><strong>#HD${c.id}</strong></td>
+                            <td>Phòng ${c.room_id}</td>
+                            <td>${new Date(c.start_date).toLocaleDateString('vi-VN')}</td>
+                            <td>${new Date(c.end_date).toLocaleDateString('vi-VN')}</td>
+                            <td>
+                                <span class="status-badge status-${statusClass}">
+                                    ${statusClass === 'ACTIVE' ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-clock"></i>'} 
+                                    ${statusText}
+                                </span>
+                            </td>
+                            <td style="text-align: right;">
+                                <div class="table-actions" style="justify-content: flex-end;">
+                                    ${actionHtml}
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                list.innerHTML = '<tr><td colspan="6" style="color:red; text-align:center;">Lỗi tải dữ liệu.</td></tr>';
+            }
+        }
+
+        window.confirmContract = async function(id) {
+            if (!confirm('Bạn xác nhận đồng ý ký hợp đồng này?')) return;
+            try {
+                await hopDongService.xacNhan(id);
+                alert('Đã xác nhận hợp đồng thành công!');
+                loadContracts();
+            } catch (error) {
+                alert('Xác nhận thất bại: ' + error.message);
+            }
+        };
+
+        loadContracts();
+    </script>
+</body>
+</html>

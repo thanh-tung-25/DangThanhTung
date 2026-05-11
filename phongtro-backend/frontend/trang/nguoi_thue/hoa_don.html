@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh Toán - RoomManager</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/global.css">
+    <link rel="stylesheet" href="../../tai_nguyen/css/hoa_don.css">
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar" id="sidebar-container">
+            <div class="sidebar-logo">RoomManager</div>
+            <ul class="sidebar-menu">
+                <li><a href="../../trang/nguoi_thue/bang_tin.html"><i class="fa-solid fa-newspaper"></i> Bảng tin phòng</a></li>
+                <li><a href="../../trang/nguoi_thue/tin_nhan.html"><i class="fa-solid fa-comment-dots"></i> Tin nhắn</a></li>
+                <li><a href="../../trang/nguoi_thue/hop_dong.html"><i class="fa-solid fa-file-contract"></i> Hợp đồng</a></li>
+                <li><a href="../../trang/nguoi_thue/nhom.html"><i class="fa-solid fa-users"></i> Nhóm trọ</a></li>
+                <li><a href="../../trang/nguoi_thue/hoa_don.html" class="active"><i class="fa-solid fa-file-invoice-dollar"></i> Thanh toán</a></li>
+                <li><a href="../../trang/nguoi_thue/thong_bao.html"><i class="fa-solid fa-bell"></i> Thông báo</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button id="btn-logout" class="btn-logout"><i class="fa-solid fa-sign-out-alt"></i> Đăng xuất</button>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <div id="navbar-container"></div>
+            
+            <div class="page-container">
+                <h2 style="color: #1e293b; margin-bottom: 2rem;"><i class="fa-solid fa-file-invoice-dollar text-blue-500"></i> Lịch Sử Thanh Toán</h2>
+                
+                <div id="invoice-list">
+                    <div style="text-align:center; padding: 4rem; color: #94a3b8;">
+                        <i class="fa-solid fa-circle-notch fa-spin fa-2x"></i>
+                        <p style="margin-top: 1rem;">Đang tải dữ liệu hóa đơn...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thanh Toán QR (Bước 22) -->
+    <div class="modal-overlay" id="qr-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-qrcode text-blue-500"></i> Thanh toán bằng QR Code</h3>
+                <button class="btn-close" onclick="closeQRModal()"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="qr-container">
+                    <div class="qr-instruction">
+                        Vui lòng mở ứng dụng ngân hàng và quét mã QR dưới đây để thanh toán tự động.
+                    </div>
+                    
+                    <div class="qr-code">
+                        <!-- Sử dụng API công khai để tạo mã QR ảo chứa ID giao dịch -->
+                        <img id="qr-img" src="" alt="Mã QR Thanh Toán">
+                    </div>
+
+                    <div class="qr-bank-info">
+                        <p><span>Ngân hàng:</span> <span>MB Bank</span></p>
+                        <p><span>Chủ tài khoản:</span> <span id="qr-owner">CHU NHA</span></p>
+                        <p><span>Số tiền:</span> <span id="qr-amount" style="color: #0ea5e9; font-size: 1.1rem;">0 đ</span></p>
+                        <p><span>Nội dung CK:</span> <span id="qr-content">Thanh toan tien nha</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <span style="color: #64748b; font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Đang chờ thanh toán...
+                </span>
+                <div style="display: flex; gap: 1rem;">
+                    <button class="btn-outline" onclick="closeQRModal()">Hủy</button>
+                    <!-- Nút xác nhận giả lập nếu chưa có tích hợp banking thật -->
+                    <button class="btn-post" id="btn-confirm-pay" style="background: #16a34a;">
+                        <i class="fa-solid fa-check"></i> Đã chuyển khoản
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { app } from '../../tai_nguyen/js/app.js';
+        import { thanhToanService } from '../../dich_vu/thanh_toan.service.js';
+
+        // Override loadComponent để không load lại sidebar gốc (giữ nguyên layout)
+        const originalLoad = app.loadComponent;
+        app.loadComponent = async function(id, url) {
+            if (id === 'sidebar-container') return;
+            await originalLoad.call(app, id, url);
+        };
+
+        await app.init('Thanh Toán', 'TENANT');
+
+        let currentInvoiceId = null;
+
+        async function loadInvoices() {
+            const list = document.getElementById('invoice-list');
+            try {
+                const res = await thanhToanService.layDanhSach();
+                const invoices = Array.isArray(res) ? res : (res.data || []);
+                
+                if (invoices.length === 0) {
+                    list.innerHTML = `
+                        <div style="text-align:center; padding: 4rem; background: #fff; border-radius: 12px; border: 1px dashed #cbd5e1; color: #94a3b8;">
+                            <i class="fa-solid fa-receipt fa-3x"></i>
+                            <p style="margin-top: 1rem; font-size: 1.1rem;">Bạn chưa có hóa đơn nào.</p>
+                        </div>`;
+                    return;
+                }
+
+                list.innerHTML = invoices.map(inv => {
+                    const isPaid = inv.status === 'PAID';
+                    const amountStr = Number(inv.amount || 0).toLocaleString('vi-VN');
+
+                    return `
+                        <div class="invoice-card">
+                            <div class="invoice-header">
+                                <div class="invoice-title">
+                                    <h3>Hóa Đơn Thuê Phòng (HĐ: #${inv.contract_id})</h3>
+                                    <span>Ngày tạo: ${new Date(inv.created_at).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                                <div class="invoice-amount">${amountStr} đ</div>
+                            </div>
+                            <div class="invoice-body">
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Trạng thái</span>
+                                    <span class="invoice-value badge-${isPaid ? 'PAID' : 'UNPAID'}">
+                                        ${isPaid ? '<i class="fa-solid fa-check"></i> Đã thanh toán' : '<i class="fa-solid fa-circle-exclamation"></i> Chưa thanh toán'}
+                                    </span>
+                                </div>
+                                <div class="invoice-row">
+                                    <span class="invoice-label">Mã giao dịch</span>
+                                    <span class="invoice-value">TXN-${inv.id.toString().padStart(6, '0')}</span>
+                                </div>
+                            </div>
+                            <div class="invoice-footer">
+                                ${!isPaid ? `
+                                    <button class="btn-post" onclick="openQRModal(${inv.id}, ${inv.amount}, ${inv.contract_id})" style="background: linear-gradient(135deg, #10b981, #059669);">
+                                        <i class="fa-solid fa-qrcode"></i> Thanh toán bằng QR
+                                    </button>
+                                ` : `
+                                    <button class="btn-outline" style="color: #64748b; border-color: #cbd5e1; cursor: default;">
+                                        <i class="fa-solid fa-check-double"></i> Hoàn tất
+                                    </button>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error(error);
+                list.innerHTML = '<div style="color:red; text-align:center;">Lỗi tải dữ liệu hóa đơn.</div>';
+            }
+        }
+
+        window.openQRModal = function(id, amount, contractId) {
+            currentInvoiceId = id;
+            
+            // Cập nhật thông tin lên Modal
+            const amountStr = Number(amount).toLocaleString('vi-VN');
+            document.getElementById('qr-amount').textContent = amountStr + ' đ';
+            document.getElementById('qr-content').textContent = `Thanh toan HD ${contractId}`;
+            
+            // Tạo link QR code giả lập từ Google Chart API hoặc qrserver
+            const qrData = encodeURIComponent(`MBBANK|STK|CHU NHA|${amount}|Thanh toan HD ${contractId}`);
+            document.getElementById('qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${qrData}`;
+
+            document.getElementById('qr-modal').classList.add('active');
+        };
+
+        window.closeQRModal = function() {
+            document.getElementById('qr-modal').classList.remove('active');
+            currentInvoiceId = null;
+        };
+
+        // Xác nhận đã chuyển khoản (Vì chưa có webhook ngân hàng thật, cho phép user click để báo)
+        document.getElementById('btn-confirm-pay').addEventListener('click', async () => {
+            if (!currentInvoiceId) return;
+            
+            const btn = document.getElementById('btn-confirm-pay');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...';
+
+            try {
+                // Gọi API báo đã thanh toán
+                await thanhToanService.thanhToanHoaDon(currentInvoiceId);
+                alert('Thanh toán thành công! Giao dịch của bạn đã được ghi nhận.');
+                closeQRModal();
+                loadInvoices(); // Load lại để update trạng thái PAID
+                
+                // Kích hoạt Toast qua app.js (Giả lập webhook bắn về socket)
+                if (typeof app.showToast === 'function') {
+                    app.showToast('Thanh toán thành công', `Hóa đơn TXN-${currentInvoiceId.toString().padStart(6, '0')} đã được thanh toán.`, 'success');
+                }
+            } catch (error) {
+                alert('Lỗi xác nhận thanh toán: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-check"></i> Đã chuyển khoản';
+            }
+        });
+
+        loadInvoices();
+    </script>
+</body>
+</html>
