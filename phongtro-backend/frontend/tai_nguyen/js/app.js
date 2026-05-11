@@ -7,12 +7,12 @@ export const app = {
 
     async init(pageTitle, requiredRole) {
         // Protect route
-        if (!auth.checkAuth(requiredRole)) return;
+        const isAuthenticated = await auth.checkAuth(requiredRole);
+        if (!isAuthenticated) return;
 
-        // Load components
-        const rootPath = window.location.pathname.split('../../')[0];
-        await this.loadComponent('sidebar-container', rootPath + '../../thanh_phan/sidebar.html');
-        await this.loadComponent('navbar-container', rootPath + '../../thanh_phan/navbar.html');
+        // Load components (relative from HTML files inside trang/role/)
+        await this.loadComponent('sidebar-container', '../../thanh_phan/sidebar.html');
+        await this.loadComponent('navbar-container', '../../thanh_phan/navbar.html');
 
         // Thêm Toast Container (Bước 20)
         this.initToastContainer();

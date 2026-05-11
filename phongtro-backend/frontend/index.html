@@ -14,27 +14,48 @@
     <div style="text-align: center;">
         <i class="fa-solid fa-circle-notch fa-spin fa-2x" style="color: #0ea5e9; margin-bottom: 1rem;"></i>
         <p>Đang chuyển hướng vào hệ thống...</p>
-        <script>
-            // Thử kiểm tra localStorage xem có user không, nếu có thì redirect thẳng
-            try {
-                const token = localStorage.getItem('roommanager_token');
-                const userRaw = localStorage.getItem('roommanager_user');
-                if (token && userRaw) {
-                    const user = JSON.parse(userRaw);
-                    if (user.role === 'LANDLORD') {
+            async function checkAuthAndRedirect() {
+                try {
+                    const token = localStorage.getItem('roommanager_token');
+                    if (!token) {
+                        window.location.href = 'trang/xac_thuc/dang_nhap.html';
+                        return;
+                    }
+
+                    // Gọi API để xác thực token thực tế
+                    const res = await fetch('http://localhost:3000/api/auth/me', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+
+                    if (!res.ok) {
+                        // Token hết hạn hoặc sai
+                        localStorage.removeItem('roommanager_token');
+                        localStorage.removeItem('roommanager_user');
+                        window.location.href = 'trang/xac_thuc/dang_nhap.html';
+                        return;
+                    }
+
+                    const user = await res.json();
+                    
+                    // Cập nhật lại thông tin user lỡ có thay đổi
+                    localStorage.setItem('roommanager_user', JSON.stringify(user));
+
+                    if (user.role === 'LANDLORD' || user.role === 'CHU_TRO') {
                         window.location.href = 'trang/chu_tro/bang_dieu_khien.html';
-                    } else if (user.role === 'TENANT') {
+                    } else if (user.role === 'TENANT' || user.role === 'NGUOI_THUE') {
                         window.location.href = 'trang/nguoi_thue/bang_tin.html';
+                    } else if (user.role === 'ADMIN' || user.role === 'admin') {
+                        window.location.href = 'trang/admin/bang_dieu_khien.html';
                     } else {
                         window.location.href = 'trang/xac_thuc/dang_nhap.html';
                     }
-                } else {
+                } catch(e) {
+                    console.error(e);
                     window.location.href = 'trang/xac_thuc/dang_nhap.html';
                 }
-            } catch(e) {
-                window.location.href = 'trang/xac_thuc/dang_nhap.html';
             }
-        </script>
+
+            checkAuthAndRedirect();
     </div>
 </body>
 </html>

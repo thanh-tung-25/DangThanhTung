@@ -34,41 +34,56 @@ export const auth = {
         localStorage.removeItem(CONFIG.TOKEN_KEY);
         localStorage.removeItem(CONFIG.USER_KEY);
         this.user = null;
-        const basePath = window.location.pathname.split('../../')[0] + '../../trang';
-        window.location.href = basePath + '/xac_thuc/dang_nhap.html';
+        window.location.href = '../../trang/xac_thuc/dang_nhap.html';
     },
 
     redirectByRole(role) {
-        // Lấy đúng đường dẫn gốc (giữ lại phần /DangThanhTung/phongtro-backend nếu có)
-        const basePath = window.location.pathname.split('../../')[0] + '../../trang';
-        
         switch (role) {
             case 'ADMIN':
             case 'admin':
-                window.location.href = basePath + '/admin/bang_dieu_khien.html';
+                window.location.href = '../../trang/admin/bang_dieu_khien.html';
                 break;
             case 'LANDLORD':
             case 'CHU_TRO':
-                window.location.href = basePath + '/chu_tro/bang_dieu_khien.html';
+                window.location.href = '../../trang/chu_tro/bang_dieu_khien.html';
                 break;
             case 'TENANT':
             case 'NGUOI_THUE':
-                window.location.href = basePath + '/nguoi_thue/bang_tin.html';
+                window.location.href = '../../trang/nguoi_thue/bang_tin.html';
                 break;
             default:
-                window.location.href = basePath + '/xac_thuc/dang_nhap.html';
+                window.location.href = '../../trang/xac_thuc/dang_nhap.html';
         }
     },
 
     // Kiểm tra quyền truy cập route
-    checkAuth(requiredRole = null) {
+    async checkAuth(requiredRole = null) {
         const token = localStorage.getItem(CONFIG.TOKEN_KEY);
-        const currentUser = this.user;
-        const basePath = window.location.pathname.split('../../')[0] + '../../trang';
+        let currentUser = this.user;
 
         // Chưa đăng nhập -> đá về trang đăng nhập
-        if (!token || !currentUser) {
-            window.location.href = basePath + '/xac_thuc/dang_nhap.html';
+        if (!token) {
+            window.location.href = '../../trang/xac_thuc/dang_nhap.html';
+            return false;
+        }
+
+        try {
+            // Xác thực token với backend để tránh token cũ/giả mạo
+            const res = await fetch(`${CONFIG.API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!res.ok) {
+                this.logout();
+                return false;
+            }
+
+            currentUser = await res.json();
+            this.user = currentUser;
+            localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(currentUser));
+        } catch (error) {
+            console.error('Lỗi xác thực:', error);
+            this.logout();
             return false;
         }
 

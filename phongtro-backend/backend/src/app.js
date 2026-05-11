@@ -21,11 +21,13 @@ const thongbaoRoutes = require("./routes/thongbao.routes");
 const baidangRoutes = require("./routes/baidang.routes");
 const nhomRoutes = require("./routes/nhom.routes");
 const adminRoutes = require("./routes/admin.routes");
+const nguoidungRoutes = require("./routes/nguoidung.routes");
 
 app.use("/api/baidang", baidangRoutes);
 app.use("/api/nhom", nhomRoutes);
 // API
 app.use("/api/auth", authRoutes);
+app.use("/api/nguoidung", nguoidungRoutes);
 app.use("/api/phong", phongRoutes);
 app.use("/api/hopdong", hopdongRoutes);
 app.use("/api/thanhtoan", thanhtoanRoutes);

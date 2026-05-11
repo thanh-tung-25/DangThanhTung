@@ -67,7 +67,14 @@ await db.query(
 return { 
     accessToken, 
     refreshToken,
-    user: { id: user.id, username: user.username, role: user.role }
+    user: { 
+        id: user.id, 
+        username: user.username, 
+        role: user.role,
+        fullName: user.full_name || null,
+        phone: user.phone || null,
+        email: user.email || null
+    }
 };
 };
 

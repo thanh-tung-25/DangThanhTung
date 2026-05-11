@@ -12,9 +12,9 @@ export const nguoiDungService = {
 
     // Bước 23: Cập nhật Profile
     async capNhatProfile(data) {
-        // Mô phỏng việc gọi API thành công (do backend chưa hỗ trợ PUT)
+        const result = await api.put('/nguoidung/profile', data);
+        const updatedUser = result.data;
         // Cập nhật trực tiếp vào bộ nhớ cục bộ để UI thay đổi ngay
-        const updatedUser = { ...auth.user, ...data };
         localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(updatedUser));
         auth.user = updatedUser;
         return updatedUser;
@@ -26,7 +26,7 @@ export const nguoiDungService = {
         if (!oldPassword || !newPassword) throw new Error("Vui lòng nhập đầy đủ mật khẩu");
         if (newPassword.length < 6) throw new Error("Mật khẩu mới phải dài hơn 6 ký tự");
         
-        // Mô phỏng gọi API thành công (do backend chưa có route đổi pass)
-        return { success: true, message: "Đổi mật khẩu thành công" };
+        // Gọi API thật
+        return await api.put('/nguoidung/password', { currentPassword: oldPassword, newPassword });
     }
 };
